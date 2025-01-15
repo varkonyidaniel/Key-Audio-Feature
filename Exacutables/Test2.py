@@ -42,6 +42,4 @@ if __name__ == "__main__":
 
     export_graphviz(regressor, out_file='tree.dot',feature_names=['Production Cost'])
 
-
-asdas
-assert asd
+    print('alma')
