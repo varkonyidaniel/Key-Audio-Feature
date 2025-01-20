@@ -249,10 +249,7 @@ class GeneticAlgorithm:
                         self.max_reg[i] = key                       # save best regressor
 
 
-
-
 # MEGÍRNI
-
 
     # TODO: megírni, ha meglessz a visszatérő DT objektum!!!
     def get_most_important_features(self, num: int):
