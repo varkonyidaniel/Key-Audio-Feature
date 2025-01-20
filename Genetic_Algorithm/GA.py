@@ -249,8 +249,73 @@ class GeneticAlgorithm:
                         self.max_reg[i] = key                       # save best regressor
 
 
-# MEGÍRNI MÉG EZT!!!!
+    def create_level_info(self,children_left: np.ndarray, children_right: np.ndarray) -> np.ndarray:
+        i = 0
+        level_info = -1 * np.ones((len(children_right)))
+        proc = np.array([0])
+        next_proc = np.array([])
+        level = 0
 
-    # TODO: megírni, ha meglessz a visszatérő DT objektum!!!
-    def get_most_important_features(self, num: int):
-        return np.array([1, 2, 3])
+        while (len(proc) > 0):
+            # [0]
+            # [1,2]
+            act_ = int(proc[0])
+
+            level_info[act_] = level
+            next_proc = np.append(next_proc, children_left[act_])
+            next_proc = np.append(next_proc, children_right[act_])
+            proc = np.delete(proc, 0)
+            if len(proc) == 0:
+                level = level + 1
+                proc = next_proc
+                next_proc = np.array([])
+                if proc.__contains__(-1):
+                    proc = np.delete(proc, np.where(proc == -1))
+
+        return level_info
+
+    def get_most_important_features(self, num_features: int, num_gen: int):
+
+        value_matrix = np.array([])
+
+        for idx in range(self.population):  # for all individual idx
+
+            tree_level_info = self.create_level_info(self.DTs[idx].tree_.children_left,
+                                                     self.DTs[idx].tree_.children_right)
+
+            # values (weights) of features for individual idx.
+            values = self.calc_feature_values(tree_level_info, self.DTs[idx].tree_.feature)
+
+            # value_matrix contains values belonging to each feature by inidividual idx.
+            if idx == 0:
+                value_matrix = values
+            else:
+                value_matrix = np.vstack(value_matrix, values)
+
+            # calculate NEMENYI's order based on value matrix
+
+        Nemenyi_order_Features = self.calc_Nemenyi_Order(value_matrix)
+
+        return Nemenyi_order_Features[:num_features]
+
+    def calc_feature_values(self, tree_level_info:np.ndarray, features:np.ndarray)-> np.ndarray:
+
+        len_ = len(tree_level_info)         # node number in the tree
+        num_levels = np.max(tree_level_info)
+        fet_values = np.zeros((len_))
+
+        for i in range(len_):
+            weight_ = (num_levels-tree_level_info[i])/num_levels
+            fet_values[i] = fet_values[i]+weight_
+
+        return fet_values
+
+
+
+    # MEGÍRNI
+
+
+
+    def calc_Nemenyi_Order(self,value_matrix:np.ndarray)-> np.ndarray:
+        pass
+
