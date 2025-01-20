@@ -178,7 +178,8 @@ if __name__ == "__main__":
 
     source_dir = "/DATA/WAV"
     target_dir = "/DATA/FE"
-    parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
+    #parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
+    parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
 
     # check if directories are existing, if not ERROR
     check_directories(parent_dir,source_dir, target_dir)

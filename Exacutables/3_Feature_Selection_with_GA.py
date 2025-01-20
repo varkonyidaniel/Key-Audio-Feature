@@ -22,6 +22,11 @@ if __name__ == "__main__":
     hive_id = 26
     select_k = 20
 
+
+    # TODO: Filtering by binary classification!!!! - Dani!!
+
+
+
     print("Creation of GA object... START")
     ga = ga.GeneticAlgorithm(Size_of_Population, Lengt_of_Chromosome, Early_Stopping_Max)
     print("Creation of GA object... END")
@@ -53,6 +58,7 @@ if __name__ == "__main__":
         print(f"Creation + save of {n_generation}th generation... START")
 
         idx_imp_features = ga.get_most_important_features(num_important_features, n_generation)
+
         pop_n = ga.gen_next_generation (n_elites,mutation_probability,idx_imp_features, select_k)
         print(f"Creation + save of {n_generation}th generation... END")
 

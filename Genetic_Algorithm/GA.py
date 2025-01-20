@@ -274,6 +274,7 @@ class GeneticAlgorithm:
 
         return level_info
 
+    # TODO: dt1 dt2, dt3 alapján rekurzíven átnézni!
     def get_most_important_features(self, num_features: int, num_gen: int):
 
         value_matrix = np.array([])
@@ -296,6 +297,7 @@ class GeneticAlgorithm:
 
         Nemenyi_order_Features = self.calc_Nemenyi_Order(value_matrix)
 
+        # indexek kellenek a konlrát featureek helyett
         return Nemenyi_order_Features[:num_features]
 
     def calc_feature_values(self, tree_level_info:np.ndarray, features:np.ndarray)-> np.ndarray:
@@ -310,12 +312,12 @@ class GeneticAlgorithm:
 
         return fet_values
 
-
-
     # MEGÍRNI
 
 
-
+    # TODO: DANI csinálja
     def calc_Nemenyi_Order(self,value_matrix:np.ndarray)-> np.ndarray:
-        pass
+        pass #hive id-k alapján
+        # dt 1, dt 2, dt 3
+        # a 3 fa alapján kell a Neményi Order
 

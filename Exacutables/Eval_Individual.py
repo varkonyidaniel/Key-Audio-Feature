@@ -10,6 +10,8 @@ import Outputs.data_reader as dr
 
 # TODO: MEGÍRNI!!!! CREATE és READ is!!!!
 def Read_Mapping():
+
+    [0,1,0,0,0,1,0]
     # 0: stft 0
     # 1: stft 1
     # 2: stft 2
@@ -34,26 +36,49 @@ def get_label_data(hive_id:int):
 
 
 
-# TODO: Megírni!!!!!
 
+    # file = h5py.File(f"hive_id_{hive_id}_gen_{num_gen}_indiv_{i}.h5", 'r')
 
-
-    # én írom a regresszorokat
+#TODO: megírni - Peti!
+def eval_individual(num_gen:int, indiv_index:int, reg_method:str, max_depth:int,
+                    hive_id:int):
 
     # regression eredményét a /DATA/LOG könytárba kiírni egy logfile-ba!
     # generation_12_indiv_5.h5
-    # file = h5py.File(f"gen_{num_gen}_indiv_{i}.h5", 'r')
+    # file = h5py.File(f"hive_{hive_id}_gen_{num_gen}_indiv_{i}.h5", 'r')
 
-def eval_individual(num_gen:int, individual_idx:int, reg_method:str, max_depth:int):
+
+    #dt 1 hive id 1-re
+    #dt 2 hive id 2-re
+    #dt 3 hive id 3-re
+
+
+    # def write_data_to_h5(directory: str, filename: str, ds_label:str, data: np.ndarray):
+    #     file_name = f"{filename}.h5"
+    #     hf = h5py.File(f"{directory}/{file_name}",'a')
+    #     hf.create_dataset(f"{ds_label}", data=data)
+    #     hf.close()
+    #     print(f"Appending: {ds_label} to file: {file_name} ... DONE!", flush=True)
+
+    # output
+    # file name = ...
+    # ds_label = svr_1p0_linear_metric_name
+    # data = result of regression: svr c=1.0, kernel = linear, metric = mae
+
+
+
 
     # result object serialize - joblib dump
     # read back ser. object get numbers..
     # első létrehozza a  "tmp_gen_*_indiv_*.h5"
-    # utolsó átnevezi "gen_*_indiv_*.h5"-ra
+    # utolsó átnevezi "gen_*_indiv_*.h5"-ra, key = "lr"
+    # !!! párhuzamosságnál nem tudom, hogy melyik az utsó,
+    # szekvenciálisan kell a regresszorokat futtatni 1 node-on!!! MEGFONTOLNI!!!!
+    # generáció
 
 
     # build individual data to X
-    X = get_individual_data(num_gen,individual_idx)
+    X = get_individual_data(num_gen,indiv_index)
 
     # TODO: innen tovább írni!!!!
     # build timelabels to Y

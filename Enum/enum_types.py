@@ -57,4 +57,4 @@ class Evaluation_metrics(ExtendedEnum):
 class Regression_method(ExtendedEnum):
     DT="decision_tree"
     SVR="svr"
-    LR="lr"
+    LR="linear_regressor"
