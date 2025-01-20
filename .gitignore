@@ -10,3 +10,17 @@
 /Archive.zip
 /runexp-slurm-singularity.sh
 /.idea/
+/Users/varkonyidaniel/PycharmProjects/Feature_Identification/.DS_Store
+DATA/.DS_Store
+DATA/FE/.DS_Store
+DATA/LOG/.DS_Store
+DATA/WAV/.DS_Store
+Enum/__pycache__/enum_types.cpython-37.pyc Exacutables/.DS_Store
+Exacutables/__pycache__/Eval_Individual.cpython-37.pyc
+Feature_Extraction/__pycache__/feature_extractor.cpython-37.pyc
+Filtering/__pycache__/dani_filtering.cpython-37.pyc
+Filtering/__pycache__/filtering.cpython-37.pyc
+Genetic_Algorithm/__pycache__/GA.cpython-37.pyc
+Outputs/__pycache__/Draw.cpython-37.pyc Outputs/__pycache__/data_reader.cpython-37.pyc
+Outputs/__pycache__
+data_writter.cpython-37.pyc
