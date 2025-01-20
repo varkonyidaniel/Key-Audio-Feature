@@ -9,3 +9,4 @@
 /venv/
 /Archive.zip
 /runexp-slurm-singularity.sh
+/.idea/
