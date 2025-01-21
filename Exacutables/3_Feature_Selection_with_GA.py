@@ -22,11 +22,6 @@ if __name__ == "__main__":
     hive_id = 26
     select_k = 20
 
-
-    # TODO: Filtering by binary classification!!!! - Dani!!
-
-
-
     print("Creation of GA object... START")
     ga = ga.GeneticAlgorithm(Size_of_Population, Lengt_of_Chromosome, Early_Stopping_Max)
     print("Creation of GA object... END")
