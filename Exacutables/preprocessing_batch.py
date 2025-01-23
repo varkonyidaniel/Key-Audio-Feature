@@ -8,6 +8,7 @@ from pandas import date_range
 from pandas import DatetimeIndex
 from datetime import datetime, timedelta
 from Filtering import filtering as filt
+import joblib
 import numpy as np
 
 def parameter_check_and_handling(argv:list):
@@ -191,6 +192,14 @@ if __name__ == "__main__":
     # create list of files belonging to a specific hive in alphabetical order
     l_list_of_files_in_order = create_filename_list(n_hive_id,d_event_date,t_event_time,n_range_in_weeks)
 
+    mapping=[]
+    for feat_type in feature_types:
+        for filt_type in filter_types:
+            mapping.append(f"{feat_type.value}-{filt_type.value}")
+
+    with open(parent_dir+"/DATA/feature_list.joblib", 'wb') as f:
+        joblib.dump(mapping, f)
+
     try:
         for s_file_name in l_list_of_files_in_order:
             hive_id, record_date, record_time = split_filename(s_file_name)
@@ -225,6 +234,7 @@ if __name__ == "__main__":
             dw.write_data_to_h5(directory=parent_dir + target_dir,
                filename= f"{hive_id}_{record_date}_{record_time.replace(':','_')}_timestamps",
                ds_label= "timelabels",data=timestamps_str)
+
 
     except Exception as inst:
         print(f"==============  ERROR: {s_file_name}  ==============")
