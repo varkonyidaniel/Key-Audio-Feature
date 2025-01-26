@@ -5,6 +5,7 @@ from operator import itemgetter
 from multiprocessing import Process,Manager
 from time import sleep
 import h5py
+import joblib
 
 
 # https://www.datacamp.com/tutorial/genetic-algorithm-python
@@ -236,7 +237,7 @@ class GeneticAlgorithm:
             sleep(600)
 
         # all slurm processes created result file
-
+        '''
         for i in range(self.size_of_population):                    # far all individual
             file = h5py.File(f"gen_{num_gen}_indiv_{i}.h5", 'r')    # open file
             for key in file.keys():                                 # for all keys
@@ -246,6 +247,18 @@ class GeneticAlgorithm:
                     _res = file.get(key)
                     if _res > self.fitness_values[i]:               # save max result
                         self.fitness_values[i] = _res               # save max fitness
+                        self.max_reg[i] = key                       # save best regressor
+        '''
+        for i in range(self.size_of_population):                    # far all individual
+            #file = h5py.File(f"gen_{num_gen}_indiv_{i}.h5", 'r')    # open file
+            file=joblib.load(f"gen_{num_gen}_indiv_{i}.joblib")
+            for key in file.keys():                                 # for all keys
+                if key == "DT_model":                                     # if key is dt
+                    self.DTs[i] = np.asarray(file.get(key))         # save dt object
+                else:                                               # else: key --> result
+                    _res = -file[key]['MSE']
+                    if _res > self.fitness_values[i]:               # save max result
+                        self.fitness_values[i] = _res            # save max fitness
                         self.max_reg[i] = key                       # save best regressor
 
 
