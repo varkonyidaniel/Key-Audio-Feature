@@ -200,6 +200,8 @@ if __name__ == "__main__":
     with open(parent_dir+"/DATA/feature_list.joblib", 'wb') as f:
         joblib.dump(mapping, f)
 
+    mapping2={}
+
     try:
         for s_file_name in l_list_of_files_in_order:
             hive_id, record_date, record_time = split_filename(s_file_name)
@@ -216,6 +218,8 @@ if __name__ == "__main__":
                     filt_feature_set = filt.Fit(data=feature_set, type=filt_type, sampling_rate=n_sampling_rate,
                                             separation_logic=et.separation_type.BY_FREQ_SLICES.value,
                                             cutoff=cutoff, order=1)
+                    print(f'{feat_type.value} - {filt_type.value} - Data dimensions: ', filt_feature_set.shape)
+                    mapping2[f"{feat_type.value}-{filt_type.value}"]=filt_feature_set.shape
 
                     dw.write_data_to_h5(directory=parent_dir + target_dir,
                                       filename= f"{hive_id}_{record_date}_{record_time.replace(':','_')}_{feat_type.value}_{filt_type.value}",
@@ -234,7 +238,8 @@ if __name__ == "__main__":
             dw.write_data_to_h5(directory=parent_dir + target_dir,
                filename= f"{hive_id}_{record_date}_{record_time.replace(':','_')}_timestamps",
                ds_label= "timelabels",data=timestamps_str)
-
+        with open(parent_dir+"/DATA/feature_list_with_dim.joblib", 'wb') as f:
+            joblib.dump(mapping2, f)
 
     except Exception as inst:
         print(f"==============  ERROR: {s_file_name}  ==============")
