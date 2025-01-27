@@ -21,24 +21,28 @@ if __name__ == "__main__":
     parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
     hive_id = 26
     select_k = 20
-
-    print("Creation of GA object... START")
-    ga = ga.GeneticAlgorithm(Size_of_Population, Lengt_of_Chromosome, Early_Stopping_Max)
-    print("Creation of GA object... END")
-
-    print("Creation + save of initial population... START")
-    initial_population = ga.init_population()
-    print("Creation + save of initial population... END")
+    hive_ids = [25,26,27]
 
     print("Checking directories... START")
     dw.check_directories(parent_dir,source_dir, target_dir)
     print("Checking directories... END")
 
+
+    print("Creation of GA object... START")
+    ga = ga.GeneticAlgorithm(Size_of_Population, Lengt_of_Chromosome, Early_Stopping_Max)
+    print("Creation of GA object... END")
+
+    print("GENETIC ALGORITHM... START")
+
+    print("Creation + save of initial population to GA object... START")
+    initial_population = ga.init_population()
+    print("Creation + save of initial population to GA object... END")
+
     dw.write_data_to_h5(directory=parent_dir + target_dir,filename=f"{hive_id}_population_0",
                         ds_label="population", data=initial_population)
 
     print("Evaluation of population 0... START")
-    ga.eval_population(0)                       # num_gen = 0, 1st generation
+    ga.eval_population(0,hive_ids)                       # num_gen = 0, 1st generation
     print("Evaluation of population 0... END")
 
     dw.write_data_to_h5(directory=parent_dir + target_dir,filename=f"{hive_id}_population_0",
@@ -62,7 +66,7 @@ if __name__ == "__main__":
                             ds_label="population", data=pop_n)
 
         print(f"Evaluation of population {n_generation}... START")
-        ga.eval_population(n_generation)
+        ga.eval_population(n_generation,hive_ids)
         print(f"Evaluation of population {n_generation}... END")
 
         dw.write_data_to_h5(directory=parent_dir + target_dir,
@@ -87,3 +91,5 @@ if __name__ == "__main__":
         print(f"Processing {n_generation}th generation END")
 
         n_generation = n_generation + 1
+
+    print("GENETIC ALGORITHM... ENDS")

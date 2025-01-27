@@ -208,9 +208,9 @@ if __name__ == "__main__":
                                             separation_logic=et.separation_type.BY_FREQ_SLICES.value,
                                             cutoff=cutoff, order=1)
 
-                    dw.write_data_to_h5(directory=parent_dir + target_dir,
-                                      filename= f"{hive_id}_{record_date}_{record_time.replace(':','_')}_{feat_type.value}_{filt_type.value}",
-                                      ds_label= feat_type.value,data=filt_feature_set)
+                    #dw.write_data_to_h5(directory=parent_dir + target_dir,
+                    #                  filename= f"{hive_id}_{record_date}_{record_time.replace(':','_')}_{feat_type.value}_{filt_type.value}",
+                    #                  ds_label= feat_type.value,data=filt_feature_set)
 
             start = datetime(int(record_date[0:4]),int(record_date[5:7]),int(record_date[8:]),
                          int(record_time[0:2]),int(record_time[3:5]),int(record_time[6:]))
