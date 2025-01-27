@@ -56,9 +56,15 @@ if __name__ == "__main__":
         # selection / crossover / mutation
         print(f"Creation + save of {n_generation}th generation... START")
 
+
+
+        #TODO:  GA, eval population átírása után (dictionary, és hive id) -s változások
+        # átnézni újra
         idx_imp_features = ga.get_most_important_features(num_important_features, n_generation)
 
         pop_n = ga.gen_next_generation (n_elites,mutation_probability,idx_imp_features, select_k)
+
+
         print(f"Creation + save of {n_generation}th generation... END")
 
         dw.write_data_to_h5(directory=parent_dir + target_dir,

@@ -1,4 +1,4 @@
-import os
+import os, argparse
 
 import h5py
 import numpy as np
@@ -78,7 +78,11 @@ data_per_date={}
 timestamp_per_date={}
 
 from pandas.api.types import is_complex_dtype
+
+#TODO: detection time beolvasása preproc file szerint
 detection_times={22:datetime.datetime(2020,7,30),30:datetime.datetime(2020,7,30),37:datetime.datetime(2020,7,30)}
+
+
 def get_data(hive_id:int, per_feature_group_chromosomes:dict[str,list[int]]) -> list:
     #print('FNS: ', feature_names)
     for file in os.listdir(preprocessed_data_path):
@@ -182,118 +186,43 @@ def train_SVR(X_train,y_train):
     #predictions = model.predict(X_test)
 
 from sklearn.model_selection import train_test_split
-def eval_individual(num_gen:int, indiv_index:int, max_depth:int,
-                    hive_id:int):
+
+
+# gen_{num_gen}_indiv_{i}_hive_{hive}
+
+
+def eval_individual(num_gen:int, indiv_index:int,hive_id:int):
+
     if hive_id not in detection_times.keys():
         print(f"No Foul brood in hive {str(hive_id)}")
     data=get_individual_data(hive_id,num_gen,indiv_index,dummy_ind=True)
     pd_y=data['seconds_to_detection']
     pd_X=data.drop(columns=['seconds_to_detection'])
-    #X_train, X_test, y_train, y_test = train_test_split(pd_X, pd_y, test_size=0.3, random_state=44)
-    #data
 
     svr_stats=train_SVR(pd_X,pd_y)
     dtr_stats,dt_model=train_DTR(pd_X,pd_y)
+    # TODO: lin reg is
 
-    # regression eredményét a /DATA/LOG könytárba kiírni egy logfile-ba!
-    # generation_12_indiv_5.h5
     dir="../DATA/LOG/"
     fn=f"hive_{hive_id}_gen_{num_gen}_indiv_{indiv_index}.joblib"
-    import os
 
     # Check if directory exists
     if not os.path.exists(dir):
     # Create directory
         os.makedirs(dir)
-    '''
-    # Save the model to a temporary file
-    joblib_file = 'res.pkl' 
-    joblib.dump(dt_model, joblib_file)
 
-    # Create an H5 file and store the model
-    with h5py.File('model.h5', 'w') as h5f:
-        with open(joblib_file, 'rb') as f:
-            model_data = f.read()
-            h5f.create_dataset('model', data=model_data)
-
-    '''
-    '''
-    hf = h5py.File(f"{dir}/{fn}",'a')
-    hf.create_dataset("SVR", data=svr_stats)
-    hf.create_dataset("DTR", data=dtr_stats)
-    hf.create_dataset("DT_model", data=dt_model)
-    hf.close()
-    '''
     res={'SVR':svr_stats,'DTR':dtr_stats,'DT_model':dt_model}
     joblib.dump(res,f"{dir}/{fn}")
 
-    #dt 1 hive id 1-re
-    #dt 2 hive id 2-re
-    #dt 3 hive id 3-re
-
-
-    # def write_data_to_h5(directory: str, filename: str, ds_label:str, data: np.ndarray):
-    #     file_name = f"{filename}.h5"
-    #     hf = h5py.File(f"{directory}/{file_name}",'a')
-    #     hf.create_dataset(f"{ds_label}", data=data)
-    #     hf.close()
-    #     print(f"Appending: {ds_label} to file: {file_name} ... DONE!", flush=True)
-
-    # output
-    # file name = ...
-    # ds_label = svr_1p0_linear_metric_name
-    # data = result of regression: svr c=1.0, kernel = linear, metric = mae
-
-
-
-
-    # result object serialize - joblib dump
-    # read back ser. object get numbers..
-    # első létrehozza a  "tmp_gen_*_indiv_*.h5"
-    # utolsó átnevezi "gen_*_indiv_*.h5"-ra, key = "lr"
-    # !!! párhuzamosságnál nem tudom, hogy melyik az utsó,
-    # szekvenciálisan kell a regresszorokat futtatni 1 node-on!!! MEGFONTOLNI!!!!
-    # generáció
-
-    """
-    # build individual data to X
-    X = get_individual_data(num_gen,indiv_index)
-    indexes = [index for index, value in enumerate(X) if value == 1]
-
-    # TODO: innen tovább írni!!!!
-    # build timelabels to Y
-    y=[]
-
-
-
-    indiv = np.array([0, 1, 0, 0, 1, 1, 0, 1, 0, 0])
-    reg_m = "dt"
-    regressor = DecisionTreeRegressor(max_depth)
-    #regressor.
-
-    #dt = decision tree...
-
-
-    if reg_method == rm.DT:
-        return dt, 0.0
-    else:
-        return None, 1.1
-
-    # generation_12_indiv_5.h5 file-ban menteni az eredményt
-    # tartalma: key = svm_ data = 1.24
-    """
-import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A simple example of argparse")
     # Add arguments
     parser.add_argument('--num_gen', type=int, help='Generation no',default=1)
     parser.add_argument('--indiv_index', type=int, help='Index of individual',default=0)
-    parser.add_argument('--max_depth', type=int, help='max depth of individual',default=4)
     parser.add_argument('--hive_id', type=int, help='hive id',default=22)
-    #parser.add_argument('--greet', action='store_true', help='Include a greeting')
 
     # Parse the arguments
     # TODO reg_metod ??
     args = parser.parse_args()
-    eval_individual(args.num_gen,args.indiv_index,  args.max_depth,args.hive_id)
+    eval_individual(args.num_gen,args.indiv_index,args.hive_id)

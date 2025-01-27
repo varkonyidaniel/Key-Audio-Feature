@@ -154,6 +154,10 @@ def split_filename(filename:str):
     #record_time = "12:01:59"
     return hive_id, record_date, record_time
 
+# TODO: Peti
+# TODO: kiírni a recognition datetime-ot egy file-ba
+# TODO: Eval individual ezt olvassa be
+
 if __name__ == "__main__":
 
     # --------------------|
@@ -254,5 +258,3 @@ if __name__ == "__main__":
             source_dir, t_event_time, target_dir, e_event_type, timestamps_pydate ,timestamps_str, wav_data
 
     sys.exit(0)
-
-#TODO: Need mapping of Features
