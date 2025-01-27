@@ -5,6 +5,7 @@ from operator import itemgetter
 from multiprocessing import Process,Manager
 from time import sleep
 import h5py
+import joblib
 
 
 # https://www.datacamp.com/tutorial/genetic-algorithm-python
@@ -170,30 +171,37 @@ class GeneticAlgorithm:
 
 
     # TODO: hyperparméter értékeit betenni a log nevébe az azonosíthatóság miatt!!!
-    def start_slurm_proc(self,num_gen: int, idx_indiv: int, reg_value: str, node_id: int,
+    def start_slurm_proc(self,num_gen: int, idx_indiv: int, reg_value: str, node_idx: int,
                          img_f_path: str, img_f_name: str, path_run_job_sh: str,
-                         max_depth: int, hive_id:int):
+                         max_depth: int):
 
-        if not os.path.isdir("./slurm_logs"):
-            print(f'Missing source directory: ./slurm_logs')
+        if not os.path.isdir("./logs"):
+            print(f'Missing source directory: ./logs')
             sys.exit(1)
 
         obj_name = f"node_{node_id}_generation_{num_gen}_individual_{idx_indiv}" \
                    f"_regressor_{reg_value}_hive_{hive_id}"
 
-        runjob_sh_params = f"{num_gen} {idx_indiv} {reg_value} {max_depth} {hive_id}"
+        obj_name = f"node_{node_idx}_generation_{num_gen}_individual_{idx_indiv}_regressor_{reg_value}"
+
+        runjob_sh_params = f"{num_gen} {idx_indiv} {reg_value} {max_depth}"
         cmd_text = ["sbatch "]
-        cmd_args = [f"--output=./slurm_logs/log_job_${obj_name}.out",
+        cmd_args = [f"--output=./logs/log_job_${obj_name}.out",
                     f"--job-name=job_{obj_name}",
-                    f"--nodelist=node{node_id}",
+                    f"--nodelist=node{node_idx}",
                     f"--wrap 'singularity exec {img_f_path}/{img_f_name}'"
                     f"/{path_run_job_sh} {runjob_sh_params}"]
 
         subprocess.run(cmd_text + cmd_args)
 
 
+    def all_slurm_jobs_finished(self,log_dir:str, pattern:str):
+        par_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+        return len(fnmatch.filter(os.listdir(f"{par_dir}/{log_dir}"), f"{pattern}"))
+
+
     #TODO: bemenő paramétereket megírni hozzá!!!
-    def eval_population(self, num_gen:int, hive_ids:np.ndarray):
+    def eval_population(self, num_gen:int):
         _regressor = "svm"
         node_id = 3
         node_cnt = 10
@@ -201,6 +209,8 @@ class GeneticAlgorithm:
         img_f_name = "bee_project_2.simg"
         img_f_path = "/singularity/09-daniel-bee_project"
         path_run_job_sh = "/.../runjob.sh"
+        indiv = np.array([0,1,0,1,1,0,0])
+        n_important_features= 3
         max_depth = 10
         log_dir = "DATA/LOG"
 
@@ -253,7 +263,21 @@ class GeneticAlgorithm:
                         if _res > self.fitness_values[i]:               # save max result
                             self.fitness_values[i] = _res               # save max fitness
                             self.max_reg[i] = key                       # save best regressor
-
+        # all slurm processes created result file
+                    # save best regressor
+        '''
+        for i in range(self.size_of_population):                    # far all individual
+            #file = h5py.File(f"gen_{num_gen}_indiv_{i}.h5", 'r')    # open file
+            file=joblib.load(f"gen_{num_gen}_indiv_{i}.joblib")
+            for key in file.keys():                                 # for all keys
+                if key == "DT_model":                                     # if key is dt
+                    self.DTs[i] = np.asarray(file.get(key))         # save dt object
+                else:                                               # else: key --> result
+                    _res = -file[key]['MSE']
+                    if _res > self.fitness_values[i]:               # save max result
+                        self.fitness_values[i] = _res            # save max fitness
+                        self.max_reg[i] = key                       # save best regressor
+        '''
 
     def create_level_info(self,children_left: np.ndarray, children_right: np.ndarray) -> np.ndarray:
         i = 0
