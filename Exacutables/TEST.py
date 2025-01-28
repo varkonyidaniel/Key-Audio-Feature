@@ -1,14 +1,16 @@
 import numpy as np
 from Outputs import data_reader as dr
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.tree import export_graphviz
+
+
+
+
 
 if __name__ == "__main__":
 
-
-    f = "26_2020_05_26_09_30_26_timestamps.h5"
-    s = dr.read_h5_file("../DATA/FE/",f"{f}","timelabels")
-
-    print(s)
-
-
-
-#
+    alma = np.array([5,4,3,2,1])
+    x = 2
+    print(alma[:x])

@@ -38,13 +38,20 @@ if __name__ == "__main__":
     initial_population = ga.init_population()
     print("Creation + save of initial population to GA object... END")
 
+    # write out all individuals of population
     dw.write_data_to_h5(directory=parent_dir + target_dir,filename=f"{hive_id}_population_0",
                         ds_label="population", data=initial_population)
 
+    # Eval all individuals of firts generation.
+    # Save eval results and DT objects to GA object.
+
+    # write out all fitness values belonging to all individuals
     print("Evaluation of population 0... START")
     ga.eval_population(0,hive_ids)                       # num_gen = 0, 1st generation
     print("Evaluation of population 0... END")
 
+
+    # write out all individuals of population
     dw.write_data_to_h5(directory=parent_dir + target_dir,filename=f"{hive_id}_population_0",
                         ds_label="fitness_values", data=ga.get_all_fitness_values())
 
@@ -53,15 +60,14 @@ if __name__ == "__main__":
     while(n_generation < max_generation):
 
         print(f"Processing {n_generation}th generation START")
-        # selection / crossover / mutation
+
         print(f"Creation + save of {n_generation}th generation... START")
 
+        # select n most important feature by DT objects of all individuals
+        idx_imp_features = ga.get_most_important_features(num_important_features,hive_ids)
 
-
-        #TODO:  GA, eval population átírása után (dictionary, és hive id) -s változások
-        # átnézni újra
-        idx_imp_features = ga.get_most_important_features(num_important_features, n_generation)
-
+        # generate next population using selection, crossover, mutation
+        # overwrites old population with new
         pop_n = ga.gen_next_generation (n_elites,mutation_probability,idx_imp_features, select_k)
 
 

@@ -30,7 +30,7 @@ class GeneticAlgorithm:
         self.length_of_chromosome = length_of_chromosome
 
         self.feature_index_list = list(range(length_of_chromosome))
-        self.fitness_values = np.empty(size_of_population, dtype=float)
+        self.fitness_values = np.zeros(size_of_population, dtype=float)
         self.current_best_fitness = 0
         self.early_stopping_last_value = 0
         self.early_stopping_count = 0
@@ -39,7 +39,7 @@ class GeneticAlgorithm:
         self.early_stopping_max_iter = early_stopping_max_iter
 
         # object to store decision tree object, to determine feature importance.
-        self.DTs = np.array([])
+        self.DTs = {}
         self.max_reg = np.array([])
         # individual is a list of numbers a.k.a: index of not zero genes a.k.a:
         # the selected features for furter steps
@@ -162,82 +162,40 @@ class GeneticAlgorithm:
         return top_indeces
 
 
+
 # TESZTELNI
-
-    def all_slurm_jobs_finished(self,log_dir:str, pattern:str):
-        par_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-        return len(fnmatch.filter(os.listdir(f"{par_dir}/{log_dir}"), f"{pattern}"))
-
-
-
-    # TODO: hyperparméter értékeit betenni a log nevébe az azonosíthatóság miatt!!!
-    def start_slurm_proc(self,num_gen: int, idx_indiv: int, node_id: int,
-                         img_f_path: str, img_f_name: str, path_run_job_sh: str,
-                         hive_id: int):
-
-        if not os.path.isdir("./logs"):
-            print(f'Missing source directory: ./logs')
-            sys.exit(1)
-
-        obj_name = f"node_{node_id}_generation_{num_gen}_individual_{idx_indiv}_hive_{hive_id}"
-
-        runjob_sh_params = f"{num_gen} {idx_indiv} {hive_id}"
-        cmd_text = ["sbatch "]
-        cmd_args = [f"--output=./logs/log_job_${obj_name}.out",
-                    f"--job-name=job_{obj_name}",
-                    f"--nodelist=node{node_id}",
-                    f"--wrap 'singularity exec {img_f_path}/{img_f_name}'"
-                    f"/{path_run_job_sh} {runjob_sh_params}"]
-
-        subprocess.run(cmd_text + cmd_args)
-
-    def all_slurm_jobs_finished(self,log_dir:str, pattern:str):
-        par_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-        return len(fnmatch.filter(os.listdir(f"{par_dir}/{log_dir}"), f"{pattern}"))
-
 
     #TODO: bemenő paramétereket megírni hozzá!!!
     def eval_population(self, num_gen:int, hive_ids:np.ndarray):
-        _regressor = "svm"
-        node_id = 3
+
         node_cnt = 10
-        path_run_job_sh = ""
         img_f_name = "bee_project_2.simg"
         img_f_path = "/singularity/09-daniel-bee_project"
         path_run_job_sh = "/.../runjob.sh"
-        indiv = np.array([0,1,0,1,1,0,0])
-        n_important_features= 3
-        max_depth = 10
         log_dir = "DATA/LOG"
         node_idx = 0  # 1,2,3,6-nál hogyan állítjuk be???
         metric = "MSE"
-
-        # Pattern változott!!!!!
-        log_pattern = "gen_*_indiv_*_hive_*.h5" #"gen_*_indiv_*.h5 --> "gen_*_indiv_*_hive_*.h5"
-
-        _regressors = rm.list()
-        results = {}     # dictionary
-        manager = Manager()
-        result_dict = manager.dict()    # shared variable between paralell processes
+        log_pattern = "gen_*_indiv_*_hive_*.h5"
         active_processes = []
 
         # nth generation processing
 
         # hive_id: 25,26,27
         # indiv idx: 1, ... , 500
-        # regressor: svr, dt, lin_reg
 
-        for hive_id in hive_ids:
+        for hive in hive_ids:
             for idx_indiv in range(self.size_of_population):
 
-                p = Process(target=self.start_slurm_proc() ,
+                p = Process(target=self.start_slurm_proc(),
                             args=(self,num_gen,idx_indiv,node_idx,
-                                  img_f_path,img_f_name,path_run_job_sh,hive_id))
+                                  img_f_path,img_f_name,path_run_job_sh,hive))
 
-                p.start()                  # ASYNC start of paralell process
+                p.start()
                 active_processes.append(p)
             for proc in active_processes:
-                proc.join()                # Execution waits here until last's end
+                proc.join()
+
+                # Execution waits here until last's start
 
         # Start slurm process --> runjob.sh --> Exacutables/Eval_Individual.py 4 params
 
@@ -247,39 +205,55 @@ class GeneticAlgorithm:
         while(self.size_of_population* len(hive_ids) >self.all_slurm_jobs_finished(log_dir,log_pattern)):
             sleep(600)
 
-
-
-        # TODO: DAni
-        # TODO: átnézni, hogy hogyan megy a memóriába!!!!
         for hive in hive_ids:
             for i in range(self.size_of_population):                                # far all individual
                 #file = h5py.File(f"gen_{num_gen}_indiv_{i}_hive_{hive}.h5", 'r')    # open file
                 file = joblib.load(f"hive_{hive}_gen_{num_gen}_indiv_{i}.joblib")
 
-                # TODO: DAni
-                # TODO: mentést módostani úgy, hogy a hive id is szerepeljen, mert
-                # 1 egyedhez 3 fa tartozik, a 3 különböző hive id alapján
-                for key in file.keys():                                             # for all keys
-                    if key == "DT_model":                                     # if key is dt
-                        self.DTs[i][hive] = np.asarray(file[key])         # save dt object
-                    else:                                               # else: key --> result
-                        _res = -file[key][metric]
-                        if _res > self.fitness_values[i]:               # save max result
-                            self.fitness_values[i] = _res               # save max fitness
-                            self.max_reg[i] = key                       # save best regressor
+                for key in file.keys():                                     # for all keys
+                    if key == "DT_model":                                   # if key is dt
+                        self.DTs[(i,hive)] = file.get(key)                  # save dt object
+                    else:                                                   # else: key --> result
+                        _res = file.get(key)[metric]
+                        if _res > self.fitness_values[i]:                   # save max result
+                            self.fitness_values[i] = _res                   # save max fitness
+                            self.max_reg[i] = key                           # save best regressor
 
-                        # az összes fenti tömb helyett, dictionary kell
+    def all_slurm_jobs_finished(self,log_dir:str, pattern:str):
+        par_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+        return len(fnmatch.filter(os.listdir(f"{par_dir}/{log_dir}"), f"{pattern}"))
 
-    def create_level_info(self,children_left: np.ndarray, children_right: np.ndarray) -> np.ndarray:
-        i = 0
+    def start_slurm_proc(self,num_gen: int, idx_indiv: int, node_id: int,
+                         img_f_path: str, img_f_name: str, path_run_job_sh: str,
+                         hive_id: int):
+
+        if not os.path.isdir("./slurm_logs"):
+            os.mkdir("./slurm_logs")
+            print(f'Missing source directory: ./slurm_logs. Created!')
+            sys.exit(1)
+
+        obj_name = f"node_{node_id}_generation_{num_gen}_individual_{idx_indiv}_hive_{hive_id}"
+
+        runjob_sh_params = f"{num_gen} {idx_indiv} {hive_id}"
+        cmd_text = ["sbatch "]
+        cmd_args = [f"--output=./slurm_logs/log_job_${obj_name}.out",
+                    f"--job-name=job_{obj_name}",
+                    f"--nodelist=node{node_id}",
+                    f"--wrap 'singularity exec {img_f_path}/{img_f_name}'"
+                    f"/{path_run_job_sh} {runjob_sh_params}"]
+
+        subprocess.run(cmd_text + cmd_args)
+
+    def create_level_info(self,children_left: np.ndarray, children_right:
+                            np.ndarray) -> np.ndarray:
+
         level_info = -1 * np.ones((len(children_right)))
         proc = np.array([0])
         next_proc = np.array([])
         level = 0
 
         while (len(proc) > 0):
-            # [0]
-            # [1,2]
+
             act_ = int(proc[0])
 
             level_info[act_] = level
@@ -295,58 +269,81 @@ class GeneticAlgorithm:
 
         return level_info
 
-    # TODO: DAni
-    # TODO: dt1 dt2, dt3 alapján rekurzíven átnézni!
-    def get_most_important_features(self, num_features: int, num_gen: int):
 
-        value_matrix = np.array([])
+    def tr_fet_values_to_chr_values(self,dt_fet_values: np.ndarray, idx: int) -> np.ndarray:
+        indiv = self.population[idx]
+        chr_fet_values = np.zeros(self.length_of_chromosome)
+        x_ = []
+        for i in range(self.length_of_chromosome):
+            if indiv[i] == 1:
+                x_.append(i)
 
-        for idx in range(self.population):  # for all individual idx
+        for idx in range(self.length_of_chromosome):
+            chr_fet_values[x_[idx]] = dt_fet_values[idx]
 
-
-            # visszajövő 27-es index a tree-ben az vajában
-            # a chromosoma 27. 1-es indexét jelöli.
-            # TODO: DAni
-            # TODO: átnézni a lenti kódokat a fenti "átkódolás" alapján
-            tree_level_info = self.create_level_info(self.DTs[idx].tree_.children_left,
-                                                     self.DTs[idx].tree_.children_right)
-
-            # values (weights) of features for individual idx.
-            values = self.calc_feature_values(tree_level_info, self.DTs[idx].tree_.feature)
-
-            # value_matrix contains values belonging to each feature by inidividual idx.
-            if idx == 0:
-                value_matrix = values
-            else:
-                value_matrix = np.vstack(value_matrix, values)
-
-            # calculate NEMENYI's order based on value matrix
-
-        Nemenyi_order_Features = self.calc_Nemenyi_Order(value_matrix)
-
-        # indexek kellenek a konlrát featureek helyett
-        return Nemenyi_order_Features[:num_features]
+        return chr_fet_values
 
 
+    # TODO: weight-ek kiszámolásának módját átnézni.
+    # TODO: Ne legyen az összeg mindíg 1? Check Tomival?
+    def calc_feature_values(self,tree_level_info: np.ndarray, features: np.ndarray) -> np.ndarray:
 
-    def calc_feature_values(self, tree_level_info:np.ndarray, features:np.ndarray)-> np.ndarray:
-
-        len_ = len(tree_level_info)         # node number in the tree
-        num_levels = np.max(tree_level_info)
+        len_ = len(tree_level_info)  # node number in the tree
+        max_level = np.max(tree_level_info) + 1
         fet_values = np.zeros((len_))
 
         for i in range(len_):
-            weight_ = (num_levels-tree_level_info[i])/num_levels
-            fet_values[i] = fet_values[i]+weight_
+            if features[i] != -2:
+                weight_ = (max_level - tree_level_info[i]) / max_level  # 1/7
+                fet_values[features[i]] = fet_values[features[i]] + weight_
 
         return fet_values
+
+
+    def get_most_important_features(self, num_features: int, hive_ids:np.ndarray):
+
+        feature_values_by_indiv = {}
+
+        for idx in range(self.size_of_population):         # for all individual
+            for hive in hive_ids:
+                dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
+                                                         self.DTs[(idx,hive)].tree_.children_right)
+
+                dt_feature_value = self.calc_feature_values(dt_tree_level_info,
+                                                            self.DTs[(idx,hive)].tree_.feature)
+
+                feature_values_by_indiv[(idx,hive)] = self.tr_fet_values_to_chr_values(dt_feature_value,idx)
+
+
+        order_features = self.calc_order(feature_values_by_indiv)
+
+        return order_features[:num_features]
+
+
 
     # MEGÍRNI
 
 
-    # TODO: DANI csinálja - UTOLDÓ!!!
-    def calc_Nemenyi_Order(self,value_matrix:np.ndarray, hive_ids:np.ndarray)-> np.ndarray:
-        pass #hive id-k alapján
-        # dt 1, dt 2, dt 3
-        # a 3 fa alapján kell a Neményi Order
 
+    # TODO: DANI csinálja - UTOLSÓ!!!
+    def calc_order(self,value_matrix:dict)-> np.ndarray:
+
+        # in nth generation - n th population
+        # feature_values[(individual id,hive id)]
+
+        # feature_values(1,26) - [0,0,345,3,4,0,0,0] - chromosome hosszú
+        # feature_values(1,27) -
+        # feature_values(1,28) -
+
+        # feature_values(2,26) -
+        # feature_values(2,27) -
+        # feature_values(2,28) -
+
+        # .
+        # .
+        # .
+
+        # feature_values(500,26) -
+        # feature_values(500,27) -
+        # feature_values(500,28) -
+        pass
