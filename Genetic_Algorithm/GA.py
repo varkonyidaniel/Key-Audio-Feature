@@ -283,9 +283,12 @@ class GeneticAlgorithm:
 
         return chr_fet_values
 
-
+    # TODO: Dani csinálja
     # TODO: weight-ek kiszámolásának módját átnézni.
     # TODO: Ne legyen az összeg mindíg 1? Check Tomival?
+    # https://www.codecademy.com/article/fe-feature-importance-final
+    # GINI IMPIRITY
+
     def calc_feature_values(self,tree_level_info: np.ndarray, features: np.ndarray) -> np.ndarray:
 
         len_ = len(tree_level_info)  # node number in the tree
@@ -299,18 +302,23 @@ class GeneticAlgorithm:
 
         return fet_values
 
-
+    # GINI INDEX
     def get_most_important_features(self, num_features: int, hive_ids:np.ndarray):
 
         feature_values_by_indiv = {}
 
         for idx in range(self.size_of_population):         # for all individual
             for hive in hive_ids:
+
+
+
                 dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
                                                          self.DTs[(idx,hive)].tree_.children_right)
 
                 dt_feature_value = self.calc_feature_values(dt_tree_level_info,
                                                             self.DTs[(idx,hive)].tree_.feature)
+
+
 
                 feature_values_by_indiv[(idx,hive)] = self.tr_fet_values_to_chr_values(dt_feature_value,idx)
 
