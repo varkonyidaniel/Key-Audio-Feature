@@ -45,8 +45,8 @@ class GeneticAlgorithm:
         # the selected features for furter steps
         self.local_test = local_test
         if self.local_test:
-            self.size_of_population=3
-            self.length_of_chromosome=30
+            self.size_of_population=2
+            self.length_of_chromosome=5
 
     # generate individual - private function
     def __generate_individual(self) -> np.ndarray:

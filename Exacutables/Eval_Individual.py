@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 from sklearn.metrics import mean_squared_error
 
-from Enum.enum_types import Regression_method as rm
+from Enum.enum_types import Regression_method as rm, Event_type
 from sklearn.tree import DecisionTreeRegressor
 import Outputs.data_reader as dr
 import joblib
@@ -43,8 +43,13 @@ def get_feature_group_chromosomes(chromosomes,mapping):
     return chromosomes_per_feature_group
 
 import pandas as pd
-#TODO: mapping megírása, mapping információk kírásának betétele FE folyamatba!!
+
 def get_individual_data(hive_id:int,num_gen:int, individual_idx:int)-> pd.DataFrame:
+    with open(f"../DATA/targets_{hive_id}.joblib", 'rb') as f:
+        entry=joblib.load(f)
+        #print(entry)
+        detection_time=entry[str(Event_type.BROOD)]
+        detection_time = datetime.datetime(detection_time.year, detection_time.month, detection_time.day)
     with open("../DATA/feature_list_with_dim.joblib", 'rb') as f:
         fl = joblib.load(f)
         mapping={name:dim[0] for name,dim in fl.items()}
@@ -59,7 +64,7 @@ def get_individual_data(hive_id:int,num_gen:int, individual_idx:int)-> pd.DataFr
 
     #print("feature names",per_feature_group_chromosomes.keys())
 
-    d=get_data(hive_id,per_feature_group_chromosomes)
+    d=get_data(hive_id,per_feature_group_chromosomes,detection_time)
     return d,_chromosomes
 
     # turn chromosomes to concrete numbers a.k.a. MAPPING
@@ -86,7 +91,7 @@ from pandas.api.types import is_complex_dtype
 detection_times={22:datetime.datetime(2020,7,30),30:datetime.datetime(2020,7,30),37:datetime.datetime(2020,7,30)}
 
 
-def get_data(hive_id:int, per_feature_group_chromosomes:dict[str,list[int]]) -> list:
+def get_data(hive_id:int, per_feature_group_chromosomes:dict[str,list[int]],detection_time:datetime.datetime) -> list:
     #print('FNS: ', feature_names)
     for file in os.listdir(preprocessed_data_path):
         if (file.startswith( str(hive_id))):
@@ -126,7 +131,8 @@ def get_data(hive_id:int, per_feature_group_chromosomes:dict[str,list[int]]) -> 
                         timestamp_data = h5py.File(preprocessed_data_path + timestamp_file)["timelabels"]
                         timestamp_df = pd.DataFrame({'ts':np.array(timestamp_data)})
                         timestamp_df['ts']=pd.to_datetime(timestamp_df['ts'].map(lambda x: x.decode("utf-8")),format="%Y-%m-%d %H-%M-%S-%f")
-                        timestamp_df['time_to_detection']=detection_times[hive_id]-timestamp_df['ts']
+                        #timestamp_df['time_to_detection']=detection_times[hive_id]-timestamp_df['ts']
+                        timestamp_df['time_to_detection']=detection_time-timestamp_df['ts']
                         timestamp_df['seconds_to_detection']=timestamp_df['time_to_detection'].dt.total_seconds()
                         timestamp_df.drop(columns=['ts','time_to_detection'],inplace=True)
 
