@@ -2,10 +2,15 @@ import os, argparse
 
 import h5py
 import numpy as np
+from sklearn.metrics import mean_squared_error
+
 from Enum.enum_types import Regression_method as rm
 from sklearn.tree import DecisionTreeRegressor
 import Outputs.data_reader as dr
 import joblib
+from sklearn.model_selection import cross_val_score, KFold
+from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
 
 
 # return: 1 dt object, 1 mae result
@@ -13,7 +18,7 @@ import joblib
 
 import random
 # TODO: MEGÍRNI!!!! CREATE és READ is!!!!
-def get_feature_group_chromosomes(chromosomes):
+def get_feature_group_chromosomes(chromosomes,mapping):
     """
     with open("../DATA/feature_list.joblib", 'rb') as f:
         fl = joblib.load(f)
@@ -22,13 +27,7 @@ def get_feature_group_chromosomes(chromosomes):
     else:
         feature_names=random.choices(fl,k=2)
     """
-    with open("../DATA/feature_list_with_dim.joblib", 'rb') as f:
-        fl = joblib.load(f)
-        mapping={name:dim[0] for name,dim in fl.items()}
 
-    if not chromosomes:
-        all_features_count=sum(mapping.values())
-        chromosomes = np.random.choice([0, 1], size=(all_features_count,), p=[9./10, 1./10])
     start=0
     chromosomes_per_feature_group={}
     for k,v in mapping.items():
@@ -45,19 +44,23 @@ def get_feature_group_chromosomes(chromosomes):
 
 import pandas as pd
 #TODO: mapping megírása, mapping információk kírásának betétele FE folyamatba!!
-def get_individual_data(hive_id:int,num_gen:int, individual_idx:int,dummy_ind:bool=False)-> pd.DataFrame:
+def get_individual_data(hive_id:int,num_gen:int, individual_idx:int)-> pd.DataFrame:
+    with open("../DATA/feature_list_with_dim.joblib", 'rb') as f:
+        fl = joblib.load(f)
+        mapping={name:dim[0] for name,dim in fl.items()}
 
-    if dummy_ind:
-        per_feature_group_chromosomes = get_feature_group_chromosomes(None)
-    else:
-        _population = dr.read_h5_file("/DATA/LOG/",f"population_{num_gen}.h5","population")
+    if individual_idx:
+        _population = dr.read_h5_file("/DATA/LOG/", f"population_{num_gen}.h5", "population")
         _chromosomes = _population[individual_idx]
-        per_feature_group_chromosomes = get_feature_group_chromosomes(_chromosomes)
+    else:
+        all_features_count = sum(mapping.values())
+        _chromosomes = np.random.choice([0, 1], size=(all_features_count,), p=[9. / 10, 1. / 10])
+    per_feature_group_chromosomes = get_feature_group_chromosomes(_chromosomes,mapping)
 
     print("feature names",per_feature_group_chromosomes.keys())
 
     d=get_data(hive_id,per_feature_group_chromosomes)
-    return d
+    return d,_chromosomes
 
     # turn chromosomes to concrete numbers a.k.a. MAPPING
 
@@ -150,6 +153,48 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import GridSearchCV
 
 
+from sklearn import linear_model
+from scipy import stats
+import numpy as np
+
+# https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
+'''
+class LinearRegression_Stats(linear_model.LinearRegression):
+    """
+    LinearRegression class after sklearn's, but calculate t-statistics
+    and p-values for model coefficients (betas).
+    Additional attributes available after .fit()
+    are `t` and `p` which are of the shape (y.shape[1], X.shape[1])
+    which is (n_features, n_coefs)
+    This class sets the intercept to 0 by default, since usually we include it
+    in X.
+    """
+    'fit_intercept=True, copy_X=True, n_jobs=None, positive=False'
+    def __init__(self, *args, **kwargs):
+        if not "fit_intercept" in kwargs:
+            kwargs['fit_intercept'] = False
+        if not "copy_X" in kwargs:
+            kwargs['copy_X'] = True
+        if not "n_jobs" in kwargs:
+            kwargs['n_jobs'] = None
+        if not "positive" in kwargs:
+            kwargs['positive'] = False
+        super(LinearRegression, self)\
+                .__init__(self, *args, **kwargs)
+
+    def fit(self, X, y, n_jobs=1):
+        self = super(LinearRegression, self).fit(X, y, n_jobs)
+
+        sse = np.sum((self.predict(X) - y) ** 2, axis=0) / float(X.shape[0] - X.shape[1])
+        se = np.array([
+            np.sqrt(np.diagonal(sse[i] * np.linalg.inv(np.dot(X.T, X))))
+                                                    for i in range(sse.shape[0])
+                    ])
+
+        self.t = self.coef_ / se
+        self.p = 2 * (1 - stats.t.cdf(np.abs(self.t), y.shape[0] - X.shape[1]))
+        return self
+'''
 def train_DTR(X_train,y_train):
     param_grid = {
         'max_depth': [10, 20],
@@ -161,8 +206,8 @@ def train_DTR(X_train,y_train):
     model = grid_search.best_estimator_
     best_params = grid_search.best_params_
     print("DTR best params",best_params)
-    mse=grid_search.best_score_
-    return {"model_class":"DTR","MSE":mse,"params":best_params},model
+    mse=-grid_search.best_score_
+    return {"model_class":"DTR","MSE":mse,"params":best_params,'importance':model.feature_importances_.tolist()}
 
 
     #predictions = model.predict(X_test)
@@ -179,7 +224,7 @@ def train_SVR(X_train,y_train):
     grid_search.fit(X_train, y_train)
     #model = grid_search.best_estimator_
     best_params = grid_search.best_params_
-    mse=grid_search.best_score_
+    mse=-grid_search.best_score_
     print('SVR best params:',best_params)
     print('SVR best mse:',mse)
     return {"model_class":"DTR","MSE":mse,"params":best_params}
@@ -190,18 +235,71 @@ from sklearn.model_selection import train_test_split
 
 # gen_{num_gen}_indiv_{i}_hive_{hive}
 
+from scipy import stats
+
+
+def train_LR(X_train, y_train):
+    # Calculate p-value using statsmodels
+    X_with_const = sm.add_constant(X_train)  # Add a constant term for the intercept
+
+
+    kf = KFold(n_splits=5, shuffle=True, random_state=1)
+
+    # Initialize a list to store the mean squared errors
+    mse_list = []
+    p_list=[]
+    best_model=None
+    best_mse=0
+
+    # Cross-validation loop
+    for train_index, test_index in kf.split(X_with_const,y_train):
+        train_X, test_X = X_with_const.iloc[train_index], X_with_const.iloc[test_index]
+        train_y, test_y = y_train.iloc[train_index], y_train.iloc[test_index]
+
+        # Fit the model
+        model = sm.OLS(train_y,train_X).fit()
+
+        # Predict on the test set
+        predictions = model.predict(test_X)
+
+        # Calculate and store the mean squared error
+        mse = mean_squared_error(test_y, predictions)
+        if mse > best_mse:
+            best_model = model.params
+        p_value = model.pvalues
+        p_value.name=len(p_list)
+        p_list.append(p_value)
+        mse_list.append(mse)
+
+    # Calculate the average MSE across all folds
+    average_mse = np.mean(mse_list)
+    average_p=pd.concat(p_list,axis=1).T.mean()
+    #average_p=map(np.mean, zip(*p_list))
+    print(f'Average MSE: {average_mse:.4f}')
+    print(f'p-value: {average_p}')
+    #p= importance_to_full_list(average_p,chromosome_list=chr)
+    print("Cross-validation scores:", average_mse)
+    print("Mean cross-validation score:", mse)
+    #print('SVR best params:', best_params)
+    return {"model_class": "LR", "MSE": mse, "params": best_model, 'importance': average_p.to_list()}
+
+
+def importance_to_full_list(importance_list,chromosome_list):
+    return [ importance_list.pop(0) if i==1 else 0 for i in chromosome_list]
 
 def eval_individual(num_gen:int, indiv_index:int,hive_id:int):
 
     if hive_id not in detection_times.keys():
         print(f"No Foul brood in hive {str(hive_id)}")
-    data=get_individual_data(hive_id,num_gen,indiv_index,dummy_ind=True)
+    data,chromosomes=get_individual_data(hive_id,num_gen,indiv_index)
     pd_y=data['seconds_to_detection']
     pd_X=data.drop(columns=['seconds_to_detection'])
 
-    svr_stats=train_SVR(pd_X,pd_y)
-    dtr_stats,dt_model=train_DTR(pd_X,pd_y)
-    # TODO: lin reg is
+    #svr_stats=train_SVR(pd_X,pd_y)
+    dtr_stats=train_DTR(pd_X,pd_y)
+    lr_stats = train_LR(pd_X, pd_y)
+    dtr_stats['all_data_importance']=importance_to_full_list(dtr_stats['importance'],chromosome_list=chromosomes)
+    lr_stats['all_data_importance']=importance_to_full_list(lr_stats['importance'],chromosome_list=chromosomes)
 
     dir="../DATA/LOG/"
     fn=f"hive_{hive_id}_gen_{num_gen}_indiv_{indiv_index}.joblib"
@@ -211,18 +309,17 @@ def eval_individual(num_gen:int, indiv_index:int,hive_id:int):
     # Create directory
         os.makedirs(dir)
 
-    res={'SVR':svr_stats,'DTR':dtr_stats,'DT_model':dt_model}
-    joblib.dump(res,f"{dir}/{fn}")
+    #res={'SVR':svr_stats,'DTR':dtr_stats,'LR':lr_stats}
+    #joblib.dump(res,f"{dir}/{fn}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A simple example of argparse")
     # Add arguments
     parser.add_argument('--num_gen', type=int, help='Generation no',default=1)
-    parser.add_argument('--indiv_index', type=int, help='Index of individual',default=0)
+    parser.add_argument('--indiv_index', type=int, help='Index of individual',default=None)
     parser.add_argument('--hive_id', type=int, help='hive id',default=22)
 
     # Parse the arguments
-    # TODO reg_metod ??
     args = parser.parse_args()
     eval_individual(args.num_gen,args.indiv_index,args.hive_id)
