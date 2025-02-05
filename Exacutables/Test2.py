@@ -40,4 +40,3 @@ if __name__ == "__main__":
     plt.ylabel('Profit')
     plt.show()
 
-    export_graphviz(regressor, out_file='tree.dot',feature_names=['Production Cost'])
