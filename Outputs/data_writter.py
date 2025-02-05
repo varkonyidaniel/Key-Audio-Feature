@@ -10,6 +10,13 @@ def write_data_to_h5(directory: str, filename: str, ds_label:str, data: np.ndarr
     hf.close()
     print(f"Appending: {ds_label} to file: {file_name} ... DONE!", flush=True)
 
+def re_write_data_to_h5(directory: str, filename: str, ds_label:str, data: np.ndarray):
+    file_name = f"{filename}.h5"
+    hf = h5py.File(f"{directory}/{file_name}",'w')
+    hf.create_dataset(f"{ds_label}", data=data)
+    hf.close()
+    print(f"Writing: {ds_label} to file: {file_name} ... DONE!", flush=True)
+
 def check_directories(parent_dir:str, source_dir:str, target_dir:str):
 
     if not os.path.isdir(parent_dir+source_dir):

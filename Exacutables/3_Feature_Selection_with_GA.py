@@ -22,6 +22,11 @@ if __name__ == "__main__":
     hive_id = 26
     select_k = 20
     hive_ids = [25,26,27]
+    local_test=True
+    if local_test:
+        hive_id = 22
+        hive_ids = [22]
+        max_generation=2
 
     print("Checking directories... START")
     dw.check_directories(parent_dir,source_dir, target_dir)
@@ -29,7 +34,7 @@ if __name__ == "__main__":
 
 
     print("Creation of GA object... START")
-    ga = ga.GeneticAlgorithm(Size_of_Population, Lengt_of_Chromosome, Early_Stopping_Max)
+    ga = ga.GeneticAlgorithm(Size_of_Population, Lengt_of_Chromosome, Early_Stopping_Max,local_test=local_test)
     print("Creation of GA object... END")
 
     print("GENETIC ALGORITHM... START")
@@ -39,7 +44,8 @@ if __name__ == "__main__":
     print("Creation + save of initial population to GA object... END")
 
     # write out all individuals of population
-    dw.write_data_to_h5(directory=parent_dir + target_dir,filename=f"{hive_id}_population_0",
+    #TODO
+    dw.re_write_data_to_h5(directory=parent_dir + target_dir,filename=f"{hive_id}_population_0",
                         ds_label="population", data=initial_population)
 
     # Eval all individuals of firts generation.
