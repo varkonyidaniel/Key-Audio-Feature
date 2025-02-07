@@ -227,7 +227,7 @@ def train_SVR(X_train,y_train):
     mse=-grid_search.best_score_
     print('SVR best params:',best_params)
     print('SVR best mse:',mse)
-    return {"model_class":"DTR","MSE":mse,"params":best_params}
+    return {"model_class":"SVR","MSE":mse,"params":best_params}
     #predictions = model.predict(X_test)
 
 from sklearn.model_selection import train_test_split
