@@ -39,8 +39,12 @@ class GeneticAlgorithm:
         self.early_stopping_max_iter = early_stopping_max_iter
 
         # object to store decision tree object, to determine feature importance.
-        self.DTs = {}
-        self.max_reg = np.array([])
+
+        self.feature_importance = {}
+        self.results = {}
+
+        #self.DTs = {}
+        #self.max_reg = np.array([])
         # individual is a list of numbers a.k.a: index of not zero genes a.k.a:
         # the selected features for furter steps
 
@@ -82,7 +86,7 @@ class GeneticAlgorithm:
     # https://algorithmafternoon.com/books/genetic_algorithm/chapter04/
     def selection(self,k) -> np.ndarray:
         _candidates_idxs = random.sample(range(self.size_of_population), k)
-        parent_idxs = sorted(_candidates_idxs, key=lambda i: -self.fitness_values[i])[:-2]
+        parent_idxs = sorted(_candidates_idxs, key=lambda i: -self.fitness_values[i])[:-2] # sorted = növekvő sorrend
         return itemgetter(*parent_idxs)(self.population)
 
     # 1 point crossover, 2 child
@@ -165,6 +169,8 @@ class GeneticAlgorithm:
 
 # TESZTELNI
 
+    # TODO: Peti - teszt szekvenciális eval individula hívás 3-szor egymás után a práhuzamosság helyett+
+
     #TODO: bemenő paramétereket megírni hozzá!!!
     def eval_population(self, num_gen:int, hive_ids:np.ndarray):
 
@@ -177,11 +183,6 @@ class GeneticAlgorithm:
         metric = "MSE"
         log_pattern = "gen_*_indiv_*_hive_*.h5"
         active_processes = []
-
-        # nth generation processing
-
-        # hive_id: 25,26,27
-        # indiv idx: 1, ... , 500
 
         for hive in hive_ids:
             for idx_indiv in range(self.size_of_population):
@@ -199,9 +200,6 @@ class GeneticAlgorithm:
 
         # Start slurm process --> runjob.sh --> Exacutables/Eval_Individual.py 4 params
 
-        # TODO: Peti
-        # TODO: teszt szekvenciális eval individula hívás 3-szor egymás után a práhuzamosság helyett+
-
         while(self.size_of_population* len(hive_ids) >self.all_slurm_jobs_finished(log_dir,log_pattern)):
             sleep(600)
 
@@ -210,14 +208,31 @@ class GeneticAlgorithm:
                 #file = h5py.File(f"gen_{num_gen}_indiv_{i}_hive_{hive}.h5", 'r')    # open file
                 file = joblib.load(f"hive_{hive}_gen_{num_gen}_indiv_{i}.joblib")
 
-                for key in file.keys():                                     # for all keys
-                    if key == "DT_model":                                   # if key is dt
-                        self.DTs[(i,hive)] = file.get(key)                  # save dt object
-                    else:                                                   # else: key --> result
-                        _res = file.get(key)[metric]
-                        if _res > self.fitness_values[i]:                   # save max result
-                            self.fitness_values[i] = _res                   # save max fitness
-                            self.max_reg[i] = key                           # save best regressor
+                for key in file.keys():
+                    _data = file.get(key)   # lr_stats / dtr_stats / svr_stats
+                    self.results[(i, hive, key)] = _data['"MSE"']
+                    if not key == 'SVR':
+                        self.feature_importance[(i, hive, key)] = _data['importance']
+
+
+
+                for i in range(self.size_of_population):
+                    self.fitness_values[i] = \
+                        np.median([
+                            np.average([v for k, v in self.results.items() if i == k[0] and 'SVR' == k[2]]),
+                            np.average([v for k, v in self.results.items() if i == k[0] and 'LR' == k[2]]),
+                            np.average([v for k, v in self.results.items() if i == k[0] and 'DTR' == k[2]])
+                                  ])
+
+                #for key in file.keys():                                     # for all keys
+                #   if key == "DT_model":                                   # if key is dt
+                #       self.DTs[(i,hive)] = file.get(key)                  # save dt object
+                #   else:                                                   # else: key --> result
+                #       _res = file.get(key)[metric]
+                #       if _res > self.fitness_values[i]:                   # save max result
+                #           self.fitness_values[i] = _res                   # save max fitness
+                #           self.max_reg[i] = key                           # save best regressor
+
 
     def all_slurm_jobs_finished(self,log_dir:str, pattern:str):
         par_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
@@ -302,28 +317,50 @@ class GeneticAlgorithm:
 
         return fet_values
 
+
+
     # GINI INDEX
     def get_most_important_features(self, num_features: int, hive_ids:np.ndarray):
 
-        feature_values_by_indiv = {}
+        # svr_stats = return {"model_class":"SVR","MSE":mse,"params":best_params}
 
-        for idx in range(self.size_of_population):         # for all individual
-            for hive in hive_ids:
+        # lr_stats = return {"model_class": "LR", "MSE": mse, "params": best_model, 'importance': average_p.to_list()}
+        # lr_stats['all_data_importance'] = ....
 
+        # dtr_stats = return {"model_class":"DTR","MSE":mse,"params":best_params,'importance':model.feature_importances_.tolist()}
+        # dtr_stats['all_data_importance'] = ...
 
-
-                dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
-                                                         self.DTs[(idx,hive)].tree_.children_right)
-
-                dt_feature_value = self.calc_feature_values(dt_tree_level_info,
-                                                            self.DTs[(idx,hive)].tree_.feature)
+        # res={'SVR':svr_stats,'DTR':dtr_stats,'LR':lr_stats}
 
 
+        # egy egyedre
+        individual_index = 1
+        avg_gini = np.zeros(self.length_of_chromosome)
+        avg_lr = np.zeros(self.length_of_chromosome)
+        for i in range(self.length_of_chromosome): # for all genes
+            avg_gini[i] = \
+                np.average([v for k, v in self.feature_importance.items() if i == k[0] and 'DT' == k[2]])
 
-                feature_values_by_indiv[(idx,hive)] = self.tr_fet_values_to_chr_values(dt_feature_value,idx)
 
 
-        order_features = self.calc_order(feature_values_by_indiv)
+        #feature_values_by_indiv = {}
+
+        #for idx in range(self.size_of_population):         # for all individual
+        #    for hive in hive_ids:
+
+
+
+                #dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
+                #                                         self.DTs[(idx,hive)].tree_.children_right)
+
+                #dt_feature_value = self.calc_feature_values(dt_tree_level_info,
+                #                                            self.DTs[(idx,hive)].tree_.feature)
+
+
+
+                #feature_values_by_indiv[(idx,hive)] = self.tr_fet_values_to_chr_values(dt_feature_value,idx)
+
+                #order_features = self.calc_order(feature_values_by_indiv)
 
         return order_features[:num_features]
 
