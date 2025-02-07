@@ -172,10 +172,38 @@ class GeneticAlgorithm:
 
 
 
-
 # TESZTELNI
 
     # TODO: Peti - teszt szekvenciális eval individula hívás 3-szor egymás után a práhuzamosság helyett+
+
+    # csak akkor jó, ha a futás utolsó lépésében jön létre a pattern szerinti file, CHECK!
+    def all_slurm_jobs_finished(self,log_dir:str, pattern:str):
+        par_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+        return len(fnmatch.filter(os.listdir(f"{par_dir}/{log_dir}"), f"{pattern}"))
+
+    def start_slurm_proc(self,num_gen: int, idx_indiv: int, node_id: int,
+                         img_f_path: str, img_f_name: str, path_run_job_sh: str,
+                         hive_id: int):
+
+        if not os.path.isdir("./slurm_logs"):
+            os.mkdir("./slurm_logs")
+            print(f'Missing source directory: ./slurm_logs. Created!')
+            sys.exit(1)
+
+        obj_name = f"node_{node_id}_generation_{num_gen}_individual_{idx_indiv}_hive_{hive_id}"
+
+        runjob_sh_params = f"{num_gen} {idx_indiv} {hive_id}"
+        cmd_text = ["sbatch "]
+        cmd_args = [f"--output=./slurm_logs/log_job_${obj_name}.out",
+                    f"--job-name=job_{obj_name}",
+                    f"--nodelist=node{node_id}",
+                    f"--wrap 'singularity exec {img_f_path}/{img_f_name}'"
+                    f"/{path_run_job_sh} {runjob_sh_params}"]
+
+        subprocess.run(cmd_text + cmd_args)
+
+
+    # MEGÍRNI
 
     #TODO: bemenő paramétereket megírni hozzá!!!
     def eval_population(self, num_gen:int, hive_ids:np.ndarray):
@@ -233,19 +261,25 @@ class GeneticAlgorithm:
             print("wait for subprocess..")
             sleep(term)
 
+
+        # Read all data from files created by Eval_Individual.pys
         for hive in hive_ids:
             for i in range(self.size_of_population):                                # far all individual
-                #file = h5py.File(f"gen_{num_gen}_indiv_{i}_hive_{hive}.h5", 'r')    # open file
                 file = joblib.load(f"../DATA/LOG/hive_{hive}_gen_{num_gen}_indiv_{i}.joblib")
 
-                for key in file.keys():
-                    _data = file.get(key)   # lr_stats / dtr_stats / svr_stats
+                for key in file.keys():                         # LR / DTR / SVR
+                    _data = file.get(key)                       # _data = lr_stats / dtr_stats / svr_stats
+
+                    # save MSEs to GA object
                     self.results[(i, hive, key)] = _data['"MSE"']
+
+                    # Save feature importance to GA object
                     if not key == 'SVR':
-                        self.feature_importance[(i, hive, key)] = _data['importance']
+                        self.feature_importance[(i, hive, key)] = _data['all_data_importance']
 
-
-
+                # TESTED 2025.02.07. - VD
+                # TODO: fitness értéknek növekedőnek kelle lennie, ez akkor jó ha csökken,
+                #  ellentmondást feloldani 1/x-szel , vaahogy?
                 for i in range(self.size_of_population):
                     self.fitness_values[i] = \
                         np.median([
@@ -262,149 +296,6 @@ class GeneticAlgorithm:
                 #       if _res > self.fitness_values[i]:                   # save max result
                 #           self.fitness_values[i] = _res                   # save max fitness
                 #           self.max_reg[i] = key                           # save best regressor
-
-
-    def all_slurm_jobs_finished(self,log_dir:str, pattern:str):
-        par_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-        return len(fnmatch.filter(os.listdir(f"{par_dir}/{log_dir}"), f"{pattern}"))
-
-
-
-    def start_slurm_proc(self,num_gen: int, idx_indiv: int, node_id: int,
-                         img_f_path: str, img_f_name: str, path_run_job_sh: str,
-                         hive_id: int):
-
-        if not os.path.isdir("./slurm_logs"):
-            os.mkdir("./slurm_logs")
-            print(f'Missing source directory: ./slurm_logs. Created!')
-            sys.exit(1)
-
-        obj_name = f"node_{node_id}_generation_{num_gen}_individual_{idx_indiv}_hive_{hive_id}"
-
-        runjob_sh_params = f"{num_gen} {idx_indiv} {hive_id}"
-        cmd_text = ["sbatch "]
-        cmd_args = [f"--output=./slurm_logs/log_job_${obj_name}.out",
-                    f"--job-name=job_{obj_name}",
-                    f"--nodelist=node{node_id}",
-                    f"--wrap 'singularity exec {img_f_path}/{img_f_name}'"
-                    f"/{path_run_job_sh} {runjob_sh_params}"]
-
-        subprocess.run(cmd_text + cmd_args)
-
-    def create_level_info(self,children_left: np.ndarray, children_right:
-                            np.ndarray) -> np.ndarray:
-
-        level_info = -1 * np.ones((len(children_right)))
-        proc = np.array([0])
-        next_proc = np.array([])
-        level = 0
-
-        while (len(proc) > 0):
-
-            act_ = int(proc[0])
-
-            level_info[act_] = level
-            next_proc = np.append(next_proc, children_left[act_])
-            next_proc = np.append(next_proc, children_right[act_])
-            proc = np.delete(proc, 0)
-            if len(proc) == 0:
-                level = level + 1
-                proc = next_proc
-                next_proc = np.array([])
-                if proc.__contains__(-1):
-                    proc = np.delete(proc, np.where(proc == -1))
-
-        return level_info
-
-
-    def tr_fet_values_to_chr_values(self,dt_fet_values: np.ndarray, idx: int) -> np.ndarray:
-        indiv = self.population[idx]
-        chr_fet_values = np.zeros(self.length_of_chromosome)
-        x_ = []
-        for i in range(self.length_of_chromosome):
-            if indiv[i] == 1:
-                x_.append(i)
-
-        for idx in range(self.length_of_chromosome):
-            chr_fet_values[x_[idx]] = dt_fet_values[idx]
-
-        return chr_fet_values
-
-    # TODO: Dani csinálja
-    # TODO: weight-ek kiszámolásának módját átnézni.
-    # TODO: Ne legyen az összeg mindíg 1? Check Tomival?
-    # https://www.codecademy.com/article/fe-feature-importance-final
-    # GINI IMPIRITY
-
-    def calc_feature_values(self,tree_level_info: np.ndarray, features: np.ndarray) -> np.ndarray:
-
-        len_ = len(tree_level_info)  # node number in the tree
-        max_level = np.max(tree_level_info) + 1
-        fet_values = np.zeros((len_))
-
-        for i in range(len_):
-            if features[i] != -2:
-                weight_ = (max_level - tree_level_info[i]) / max_level  # 1/7
-                fet_values[features[i]] = fet_values[features[i]] + weight_
-
-        return fet_values
-
-
-
-    # GINI INDEX
-    def get_most_important_features(self, num_features: int, hive_ids:np.ndarray):
-
-        # svr_stats = return {"model_class":"SVR","MSE":mse,"params":best_params}
-
-        # lr_stats = return {"model_class": "LR", "MSE": mse, "params": best_model, 'importance': average_p.to_list()}
-        # lr_stats['all_data_importance'] = ....
-
-        # dtr_stats = return {"model_class":"DTR","MSE":mse,"params":best_params,'importance':model.feature_importances_.tolist()}
-        # dtr_stats['all_data_importance'] = ...
-
-        # res={'SVR':svr_stats,'DTR':dtr_stats,'LR':lr_stats}
-
-        for idx in range(self.size_of_population):         # for all individual
-            for hive in hive_ids:
-                pass
-
-        # egy egyedre
-        individual_index = 1
-        avg_gini = np.zeros(self.length_of_chromosome)
-        avg_lr = np.zeros(self.length_of_chromosome)
-        for i in range(self.length_of_chromosome): # for all genes
-            avg_gini[i] = \
-                np.average([v for k, v in self.feature_importance.items() if i == k[0] and 'DT' == k[2]])
-
-
-                #dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
-                #                                         self.DTs[(idx,hive)].tree_.children_right)
-
-        #feature_values_by_indiv = {}
-
-        #for idx in range(self.size_of_population):         # for all individual
-        #    for hive in hive_ids:
-
-
-
-                #dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
-                #                                         self.DTs[(idx,hive)].tree_.children_right)
-
-                #dt_feature_value = self.calc_feature_values(dt_tree_level_info,
-                #                                            self.DTs[(idx,hive)].tree_.feature)
-
-
-
-                #feature_values_by_indiv[(idx,hive)] = self.tr_fet_values_to_chr_values(dt_feature_value,idx)
-
-                #order_features = self.calc_order(feature_values_by_indiv)
-
-        return np.array([])
-
-
-
-    # MEGÍRNI
-
 
 
     # TODO: DANI csinálja - UTOLSÓ!!!
@@ -429,3 +320,108 @@ class GeneticAlgorithm:
         # feature_values(500,27) -
         # feature_values(500,28) -
         return np.array([])
+
+    # GINI INDEX
+    def get_most_important_features(self, num_features: int, hive_ids:np.ndarray):
+
+        avg_idx_value = {}
+        # i = egyed index, hive = 25,26,27, key = LR/DT
+        #self.feature_importance[(i, hive, key)] = _data['all_data_importance']
+
+        for i in range(self.size_of_population):         # for all individuals
+            for j in range(self.length_of_chromosome):      # for all genes
+                avg_idx_value[(i,j,'DT')] = round(np.average(
+                    [v[j] for k, v in self.feature_importance.items() if i == k[0] and 'DT' == k[2]]), 2)
+
+                avg_idx_value[(i, j, 'LR')] = round(np.average(
+                    [v[j] for k, v in self.feature_importance.items() if i == k[0] and 'LR' == k[2]]), 2)
+
+        # make orders by value separately for DT and LR
+
+
+
+
+        #feature_values_by_indiv = {}
+
+        #for idx in range(self.size_of_population):         # for all individual
+        #    for hive in hive_ids:
+
+
+
+                #dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
+                #                                         self.DTs[(idx,hive)].tree_.children_right)
+
+                #dt_feature_value = self.calc_feature_values(dt_tree_level_info,
+                #                                            self.DTs[(idx,hive)].tree_.feature)
+
+
+
+                #feature_values_by_indiv[(idx,hive)] = self.tr_fet_values_to_chr_values(dt_feature_value,idx)
+
+                #order_features = self.calc_order(feature_values_by_indiv)
+
+        return np.array([])
+
+
+
+
+
+    # NEM KELL ???
+
+    def create_level_info(self, children_left: np.ndarray, children_right:
+    np.ndarray) -> np.ndarray:
+
+        level_info = -1 * np.ones((len(children_right)))
+        proc = np.array([0])
+        next_proc = np.array([])
+        level = 0
+
+        while (len(proc) > 0):
+
+            act_ = int(proc[0])
+
+            level_info[act_] = level
+            next_proc = np.append(next_proc, children_left[act_])
+            next_proc = np.append(next_proc, children_right[act_])
+            proc = np.delete(proc, 0)
+            if len(proc) == 0:
+                level = level + 1
+                proc = next_proc
+                next_proc = np.array([])
+                if proc.__contains__(-1):
+                    proc = np.delete(proc, np.where(proc == -1))
+
+        return level_info
+
+    def tr_fet_values_to_chr_values(self, dt_fet_values: np.ndarray, idx: int) -> np.ndarray:
+        indiv = self.population[idx]
+        chr_fet_values = np.zeros(self.length_of_chromosome)
+        x_ = []
+        for i in range(self.length_of_chromosome):
+            if indiv[i] == 1:
+                x_.append(i)
+
+        for idx in range(self.length_of_chromosome):
+            chr_fet_values[x_[idx]] = dt_fet_values[idx]
+
+        return chr_fet_values
+
+    # TODO: Dani csinálja
+    # TODO: weight-ek kiszámolásának módját átnézni.
+    # TODO: Ne legyen az összeg mindíg 1? Check Tomival?
+    # https://www.codecademy.com/article/fe-feature-importance-final
+    # GINI IMPIRITY
+
+    def calc_feature_values(self, tree_level_info: np.ndarray, features: np.ndarray) -> np.ndarray:
+
+        len_ = len(tree_level_info)  # node number in the tree
+        max_level = np.max(tree_level_info) + 1
+        fet_values = np.zeros((len_))
+
+        for i in range(len_):
+            if features[i] != -2:
+                weight_ = (max_level - tree_level_info[i]) / max_level  # 1/7
+                fet_values[features[i]] = fet_values[features[i]] + weight_
+
+        return fet_values
+
