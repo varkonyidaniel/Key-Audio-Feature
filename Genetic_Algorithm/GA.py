@@ -171,12 +171,14 @@ class GeneticAlgorithm:
 
 
 
+
+
 # TESZTELNI
 
     # TODO: Peti - teszt szekvenciális eval individula hívás 3-szor egymás után a práhuzamosság helyett+
 
     #TODO: bemenő paramétereket megírni hozzá!!!
-    def eval_population(self, num_gen:int, hive_ids:np.ndarray) -> np.ndarray:
+    def eval_population(self, num_gen:int, hive_ids:np.ndarray):
 
         node_cnt = 10
         img_f_name = "bee_project_2.simg"
@@ -364,6 +366,7 @@ class GeneticAlgorithm:
 
         for idx in range(self.size_of_population):         # for all individual
             for hive in hive_ids:
+                pass
 
         # egy egyedre
         individual_index = 1
@@ -374,8 +377,8 @@ class GeneticAlgorithm:
                 np.average([v for k, v in self.feature_importance.items() if i == k[0] and 'DT' == k[2]])
 
 
-                dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
-                                                         self.DTs[(idx,hive)].tree_.children_right)
+                #dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
+                #                                         self.DTs[(idx,hive)].tree_.children_right)
 
         #feature_values_by_indiv = {}
 
@@ -396,7 +399,7 @@ class GeneticAlgorithm:
 
                 #order_features = self.calc_order(feature_values_by_indiv)
 
-        return order_features[:num_features]
+        return np.array([])
 
 
 
@@ -425,4 +428,4 @@ class GeneticAlgorithm:
         # feature_values(500,26) -
         # feature_values(500,27) -
         # feature_values(500,28) -
-        pass
+        return np.array([])
