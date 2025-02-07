@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 from sklearn.metrics import mean_squared_error
 
-from Enum.enum_types import Regression_method as rm
+from Enum.enum_types import Regression_method as rm, Event_type
 from sklearn.tree import DecisionTreeRegressor
 import Outputs.data_reader as dr
 import joblib
@@ -43,23 +43,28 @@ def get_feature_group_chromosomes(chromosomes,mapping):
     return chromosomes_per_feature_group
 
 import pandas as pd
-#TODO: mapping megírása, mapping információk kírásának betétele FE folyamatba!!
+
 def get_individual_data(hive_id:int,num_gen:int, individual_idx:int)-> pd.DataFrame:
+    with open(f"../DATA/targets_{hive_id}.joblib", 'rb') as f:
+        entry=joblib.load(f)
+        #print(entry)
+        detection_time=entry[str(Event_type.BROOD)]
+        detection_time = datetime.datetime(detection_time.year, detection_time.month, detection_time.day)
     with open("../DATA/feature_list_with_dim.joblib", 'rb') as f:
         fl = joblib.load(f)
         mapping={name:dim[0] for name,dim in fl.items()}
 
     if individual_idx:
-        _population = dr.read_h5_file("/DATA/LOG/", f"population_{num_gen}.h5", "population")
+        _population = dr.read_h5_file("../DATA/LOG/", f"{hive_id}_population_{num_gen}.h5", "population")
         _chromosomes = _population[individual_idx]
     else:
         all_features_count = sum(mapping.values())
         _chromosomes = np.random.choice([0, 1], size=(all_features_count,), p=[9. / 10, 1. / 10])
     per_feature_group_chromosomes = get_feature_group_chromosomes(_chromosomes,mapping)
 
-    print("feature names",per_feature_group_chromosomes.keys())
+    #print("feature names",per_feature_group_chromosomes.keys())
 
-    d=get_data(hive_id,per_feature_group_chromosomes)
+    d=get_data(hive_id,per_feature_group_chromosomes,detection_time)
     return d,_chromosomes
 
     # turn chromosomes to concrete numbers a.k.a. MAPPING
@@ -86,12 +91,12 @@ from pandas.api.types import is_complex_dtype
 detection_times={22:datetime.datetime(2020,7,30),30:datetime.datetime(2020,7,30),37:datetime.datetime(2020,7,30)}
 
 
-def get_data(hive_id:int, per_feature_group_chromosomes:dict[str,list[int]]) -> list:
+def get_data(hive_id:int, per_feature_group_chromosomes:dict[str,list[int]],detection_time:datetime.datetime) -> list:
     #print('FNS: ', feature_names)
     for file in os.listdir(preprocessed_data_path):
         if (file.startswith( str(hive_id))):
             for feature_name,chromosomes in per_feature_group_chromosomes.items():
-                print(feature_name,'->',chromosomes)
+                #print(feature_name,'->',chromosomes)
                 fnp=feature_name.split('-')
                 fn=fnp[0]
                 f=fnp[1]
@@ -100,11 +105,11 @@ def get_data(hive_id:int, per_feature_group_chromosomes:dict[str,list[int]]) -> 
                     date_and_time=datetime.datetime.strptime(dts, "%Y_%m_%d_%H_%M_%S")
 
 
-                    print('====== File:',file)
-                    print("D:",date_and_time)
+                    #print('====== File:',file)
+                    #print("D:",date_and_time)
                     h5_data=h5py.File(preprocessed_data_path + file)
-                    print("K:",h5_data.keys())
-                    print("F:",fn)
+                    #print("K:",h5_data.keys())
+                    #print("F:",fn)
 
                     feature_df=pd.DataFrame(np.array(h5_data[fn]))
                     feature_df.index = feature_df.index.map(lambda x: f"{fn}-{f}-{x}")
@@ -112,8 +117,8 @@ def get_data(hive_id:int, per_feature_group_chromosomes:dict[str,list[int]]) -> 
                     feature_df=feature_df.T
                     feature_df=feature_df[to_keep_feture_names]
                     to_convert=[]
-                    if f=='dani':
-                        print(feature_df.dtypes)
+                    #if f=='dani':
+                    #    print(feature_df.dtypes)
                     for c in feature_df.columns:
                         if is_complex_dtype(feature_df[c]):
                             to_convert.append(c)
@@ -126,7 +131,8 @@ def get_data(hive_id:int, per_feature_group_chromosomes:dict[str,list[int]]) -> 
                         timestamp_data = h5py.File(preprocessed_data_path + timestamp_file)["timelabels"]
                         timestamp_df = pd.DataFrame({'ts':np.array(timestamp_data)})
                         timestamp_df['ts']=pd.to_datetime(timestamp_df['ts'].map(lambda x: x.decode("utf-8")),format="%Y-%m-%d %H-%M-%S-%f")
-                        timestamp_df['time_to_detection']=detection_times[hive_id]-timestamp_df['ts']
+                        #timestamp_df['time_to_detection']=detection_times[hive_id]-timestamp_df['ts']
+                        timestamp_df['time_to_detection']=detection_time-timestamp_df['ts']
                         timestamp_df['seconds_to_detection']=timestamp_df['time_to_detection'].dt.total_seconds()
                         timestamp_df.drop(columns=['ts','time_to_detection'],inplace=True)
 
@@ -295,13 +301,14 @@ def eval_individual(num_gen:int, indiv_index:int,hive_id:int):
     pd_y=data['seconds_to_detection']
     pd_X=data.drop(columns=['seconds_to_detection'])
 
-    #svr_stats=train_SVR(pd_X,pd_y)
+    svr_stats=train_SVR(pd_X,pd_y)
     dtr_stats=train_DTR(pd_X,pd_y)
     lr_stats = train_LR(pd_X, pd_y)
     dtr_stats['all_data_importance']=importance_to_full_list(dtr_stats['importance'],chromosome_list=chromosomes)
     lr_stats['all_data_importance']=importance_to_full_list(lr_stats['importance'],chromosome_list=chromosomes)
 
     dir="../DATA/LOG/"
+
     fn=f"hive_{hive_id}_gen_{num_gen}_indiv_{indiv_index}.joblib"
 
     # Check if directory exists
@@ -309,8 +316,8 @@ def eval_individual(num_gen:int, indiv_index:int,hive_id:int):
     # Create directory
         os.makedirs(dir)
 
-    #res={'SVR':svr_stats,'DTR':dtr_stats,'LR':lr_stats}
-    #joblib.dump(res,f"{dir}/{fn}")
+    res={'SVR':svr_stats,'DTR':dtr_stats,'LR':lr_stats}
+    joblib.dump(res,f"{dir}/{fn}")
 
 
 if __name__ == "__main__":

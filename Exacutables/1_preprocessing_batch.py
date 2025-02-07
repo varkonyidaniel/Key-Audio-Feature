@@ -225,9 +225,9 @@ if __name__ == "__main__":
                     print(f'{feat_type.value} - {filt_type.value} - Data dimensions: ', filt_feature_set.shape)
                     mapping2[f"{feat_type.value}-{filt_type.value}"]=filt_feature_set.shape
 
-                    #dw.write_data_to_h5(directory=parent_dir + target_dir,
-                    #                  filename= f"{hive_id}_{record_date}_{record_time.replace(':','_')}_{feat_type.value}_{filt_type.value}",
-                    #                  ds_label= feat_type.value,data=filt_feature_set)
+                    dw.write_data_to_h5(directory=parent_dir + target_dir,
+                                      filename= f"{hive_id}_{record_date}_{record_time.replace(':','_')}_{feat_type.value}_{filt_type.value}",
+                                      ds_label= feat_type.value,data=filt_feature_set)
 
             start = datetime(int(record_date[0:4]),int(record_date[5:7]),int(record_date[8:]),
                          int(record_time[0:2]),int(record_time[3:5]),int(record_time[6:]))
@@ -244,6 +244,9 @@ if __name__ == "__main__":
                ds_label= "timelabels",data=timestamps_str)
         with open(parent_dir+"/DATA/feature_list_with_dim.joblib", 'wb') as f:
             joblib.dump(mapping2, f)
+        target={str(e_event_type):d_event_date}
+        with open(parent_dir+f"/DATA/targets_{n_hive_id}.joblib", 'wb') as f:
+            joblib.dump(target, f)
 
     except Exception as inst:
         print(f"==============  ERROR: {s_file_name}  ==============")

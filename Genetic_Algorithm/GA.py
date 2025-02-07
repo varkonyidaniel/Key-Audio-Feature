@@ -21,7 +21,7 @@ import joblib
 
 class GeneticAlgorithm:
 
-    def __init__(self, size_of_population:int, length_of_chromosome:int, early_stopping_max_iter:int):
+    def __init__(self, size_of_population:int, length_of_chromosome:int, early_stopping_max_iter:int,local_test:bool=False):
 
         # number of population
         self.size_of_population = size_of_population
@@ -47,6 +47,10 @@ class GeneticAlgorithm:
         #self.max_reg = np.array([])
         # individual is a list of numbers a.k.a: index of not zero genes a.k.a:
         # the selected features for furter steps
+        self.local_test = local_test
+        if self.local_test:
+            self.size_of_population=2
+            self.length_of_chromosome=5
 
     # generate individual - private function
     def __generate_individual(self) -> np.ndarray:
@@ -172,7 +176,7 @@ class GeneticAlgorithm:
     # TODO: Peti - teszt szekvenciális eval individula hívás 3-szor egymás után a práhuzamosság helyett+
 
     #TODO: bemenő paramétereket megírni hozzá!!!
-    def eval_population(self, num_gen:int, hive_ids:np.ndarray):
+    def eval_population(self, num_gen:int, hive_ids:np.ndarray) -> np.ndarray:
 
         node_cnt = 10
         img_f_name = "bee_project_2.simg"
@@ -181,32 +185,56 @@ class GeneticAlgorithm:
         log_dir = "DATA/LOG"
         node_idx = 0  # 1,2,3,6-nál hogyan állítjuk be???
         metric = "MSE"
-        log_pattern = "gen_*_indiv_*_hive_*.h5"
+        log_pattern = "hive_*_gen_*_indiv_*.joblib"
         active_processes = []
+
+        # nth generation processing
+
+        # hive_id: 25,26,27
+        # indiv idx: 1, ... , 500
 
         for hive in hive_ids:
             for idx_indiv in range(self.size_of_population):
+                if self.local_test:
+                    runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index",str(idx_indiv),"--hive_id", str(hive)]
+                    #current_directory = os.getcwd()
 
-                p = Process(target=self.start_slurm_proc(),
-                            args=(self,num_gen,idx_indiv,node_idx,
-                                  img_f_path,img_f_name,path_run_job_sh,hive))
+                    # Print the current working directory
+                    #print("Current Working Directory:", current_directory)
+                    # TODO WINDOWS:
+                    subprocess.Popen(["../venv/Scripts/python.exe", "../Exacutables/Eval_Individual.py"]+runjob_sh_params)
+                    # TODO UNIX (?):
+                    #subprocess.Popen(["../venv/bin/python", "../Exacutables/Eval_Individual.py"]+runjob_sh_params)
+                    print("-->",hive,idx_indiv, "started...")
 
-                p.start()
-                active_processes.append(p)
-            for proc in active_processes:
-                proc.join()
+                else:
+
+                    p = Process(target=self.start_slurm_proc(),
+                                args=(self,num_gen,idx_indiv,node_idx,
+                                      img_f_path,img_f_name,path_run_job_sh,hive))
+
+                    p.start()
+                    active_processes.append(p)
+                    for proc in active_processes:
+                        proc.join()
 
                 # Execution waits here until last's start
 
         # Start slurm process --> runjob.sh --> Exacutables/Eval_Individual.py 4 params
 
+        # TODO: Peti
+        # TODO: teszt szekvenciális eval individula hívás 3-szor egymás után a práhuzamosság helyett+
+        term=600
+        if self.local_test:
+            term=10
         while(self.size_of_population* len(hive_ids) >self.all_slurm_jobs_finished(log_dir,log_pattern)):
-            sleep(600)
+            print("wait for subprocess..")
+            sleep(term)
 
         for hive in hive_ids:
             for i in range(self.size_of_population):                                # far all individual
                 #file = h5py.File(f"gen_{num_gen}_indiv_{i}_hive_{hive}.h5", 'r')    # open file
-                file = joblib.load(f"hive_{hive}_gen_{num_gen}_indiv_{i}.joblib")
+                file = joblib.load(f"../DATA/LOG/hive_{hive}_gen_{num_gen}_indiv_{i}.joblib")
 
                 for key in file.keys():
                     _data = file.get(key)   # lr_stats / dtr_stats / svr_stats
@@ -237,6 +265,8 @@ class GeneticAlgorithm:
     def all_slurm_jobs_finished(self,log_dir:str, pattern:str):
         par_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
         return len(fnmatch.filter(os.listdir(f"{par_dir}/{log_dir}"), f"{pattern}"))
+
+
 
     def start_slurm_proc(self,num_gen: int, idx_indiv: int, node_id: int,
                          img_f_path: str, img_f_name: str, path_run_job_sh: str,
@@ -332,6 +362,8 @@ class GeneticAlgorithm:
 
         # res={'SVR':svr_stats,'DTR':dtr_stats,'LR':lr_stats}
 
+        for idx in range(self.size_of_population):         # for all individual
+            for hive in hive_ids:
 
         # egy egyedre
         individual_index = 1
@@ -342,6 +374,8 @@ class GeneticAlgorithm:
                 np.average([v for k, v in self.feature_importance.items() if i == k[0] and 'DT' == k[2]])
 
 
+                dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
+                                                         self.DTs[(idx,hive)].tree_.children_right)
 
         #feature_values_by_indiv = {}
 
