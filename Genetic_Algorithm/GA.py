@@ -298,35 +298,19 @@ class GeneticAlgorithm:
                 #           self.max_reg[i] = key                           # save best regressor
 
 
-    # TODO: DANI csinálja - UTOLSÓ!!!
-    def calc_order(self,value_matrix:dict)-> np.ndarray:
-
-        # in nth generation - n th population
-        # feature_values[(individual id,hive id)]
-
-        # feature_values(1,26) - [0,0,345,3,4,0,0,0] - chromosome hosszú
-        # feature_values(1,27) -
-        # feature_values(1,28) -
-
-        # feature_values(2,26) -
-        # feature_values(2,27) -
-        # feature_values(2,28) -
-
-        # .
-        # .
-        # .
-
-        # feature_values(500,26) -
-        # feature_values(500,27) -
-        # feature_values(500,28) -
-        return np.array([])
-
-    # GINI INDEX
     def get_most_important_features(self, num_features: int, hive_ids:np.ndarray):
 
         avg_idx_value = {}
         # i = egyed index, hive = 25,26,27, key = LR/DT
         #self.feature_importance[(i, hive, key)] = _data['all_data_importance']
+
+        # Minden egyedre és minden kromoszómára külön vesszük a 3 DT/LR forrás alapján a fontosságok átlagát
+        #         feature_importance[(0, 25, 'LR')] = np.array([0.1,0.2,0.3,0])
+        #         feature_importance[(0, 26, 'LR')] = np.array([0.2,0.2,0,0.3])
+        #         feature_importance[(0, 27, 'LR')] = np.array([0.3,0.2,0,0.3]) -->
+
+        #       (0, 0, 'LR'): 0.2; (0, 1, 'LR'): 0.2; (0, 2, 'LR'): 0.1; (0, 3, 'LR'): 0.2
+
 
         for i in range(self.size_of_population):         # for all individuals
             for j in range(self.length_of_chromosome):      # for all genes
@@ -336,17 +320,58 @@ class GeneticAlgorithm:
                 avg_idx_value[(i, j, 'LR')] = round(np.average(
                     [v[j] for k, v in self.feature_importance.items() if i == k[0] and 'LR' == k[2]]), 2)
 
-        # make orders by value separately for DT and LR
+
+        # minden egyedre vesszük a feature-ök sorrendjét külön DT/LR szerint a korábban kisz. átlagok alapján
+        # (0, 0, 'LR'): 0.2; (0, 1, 'LR'): 0.2; (0, 2, 'LR'): 0.1; (0, 3, 'LR'): 0.2 -->
+        #  (0, 'LR'): array([0, 1, 3, 2]) FONTOS!!! CSökkenő sorrend van itt (NAGY -> KICSI)!
+
+        DT_indiv_feat_order = {}
+        LR_indiv_feat_order = {}
+
+        for i in range(self.size_of_population):
+            s = [-v for k, v in avg_idx_value.items() if i == k[0] and 'DT' == k[2]]
+            DT_indiv_feat_order[(i,'DT')] = np.argsort(np.argsort(s, axis=0), axis=0)
+
+            z = [-v for k, v in avg_idx_value.items() if i == k[0] and 'LR' == k[2]]
+            LR_indiv_feat_order[(i, 'LR')] = np.argsort(np.argsort(z, axis=0), axis=0)
 
 
+        # minden egyedre vesszük a DT és az LR alapján a sorrendekből vett egyedszintű átlagos feature sorrendet
+        # csökkenő sorrendek átlaga, átlagos csökkenő sorrend of features to each egyed
+        # {(0, 'DT'): array([0, 3, 2, 1]);  (1, 'DT'): array([1, 2, 0, 3])}
+        # {(0, 'LR'): array([0, 1, 3, 2]);  (1, 'LR'): array([1, 2, 0, 3])} -->
+        # [                 [0. 2. 2.5 1.5]                  [1. 2. 0. 3. ]]
 
+
+        avg_pop_feat = np.zeros((self.size_of_population, self.length_of_chromosome))
+
+        for j in range(self.size_of_population):
+            for i in range(self.length_of_chromosome):
+                avg_pop_feat[j, i] = np.average(
+                    [DT_indiv_feat_order[(j, 'DT')][i],
+                     LR_indiv_feat_order[(j, 'LR')][i]]
+                )
+
+        # az egyedek feature sorrendje alapján képezzük a populáció szintű feature sorrendet
+        # az egyedek sorrendjeinek átlaga alapján
+        # átlagos csökkenő sorrend of features to population
+
+        #  [0. 2. 2.5 1.5] [1. 2. 0. 3. ] --> [0.5  2.   1.25 2.25] <-- [0 2 1 3]
+
+
+        avg_pop = np.zeros(self.length_of_chromosome)
+
+        for j in range(self.length_of_chromosome):
+            avg_pop = -np.average(avg_pop_feat, axis=0)
+
+        #[0.5  2.   1.25 2.25] < -- [0 2 1 3]
+        # a feature-ök sorrendje egy csökkenő rendszerben populáció szinten
+        # res-be a 0. sorszámú index kell (0), majd az 1. sorszámú (2), ...
 
         #feature_values_by_indiv = {}
 
         #for idx in range(self.size_of_population):         # for all individual
         #    for hive in hive_ids:
-
-
 
                 #dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
                 #                                         self.DTs[(idx,hive)].tree_.children_right)
@@ -354,13 +379,11 @@ class GeneticAlgorithm:
                 #dt_feature_value = self.calc_feature_values(dt_tree_level_info,
                 #                                            self.DTs[(idx,hive)].tree_.feature)
 
-
-
                 #feature_values_by_indiv[(idx,hive)] = self.tr_fet_values_to_chr_values(dt_feature_value,idx)
 
                 #order_features = self.calc_order(feature_values_by_indiv)
 
-        return np.array([])
+        return np.argsort(avg_pop)[:num_features]
 
 
 
