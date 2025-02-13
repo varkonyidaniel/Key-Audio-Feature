@@ -203,8 +203,6 @@ class GeneticAlgorithm:
         subprocess.run(cmd_text + cmd_args)
 
 
-    # MEGÍRNI
-
     #TODO: bemenő paramétereket megírni hozzá!!!
     def eval_population(self, num_gen:int, hive_ids:np.ndarray):
 
@@ -386,65 +384,7 @@ class GeneticAlgorithm:
         return np.argsort(avg_pop)[:num_features]
 
 
+    # MEGÍRNI
 
-
-
-    # NEM KELL ???
-
-    def create_level_info(self, children_left: np.ndarray, children_right:
-    np.ndarray) -> np.ndarray:
-
-        level_info = -1 * np.ones((len(children_right)))
-        proc = np.array([0])
-        next_proc = np.array([])
-        level = 0
-
-        while (len(proc) > 0):
-
-            act_ = int(proc[0])
-
-            level_info[act_] = level
-            next_proc = np.append(next_proc, children_left[act_])
-            next_proc = np.append(next_proc, children_right[act_])
-            proc = np.delete(proc, 0)
-            if len(proc) == 0:
-                level = level + 1
-                proc = next_proc
-                next_proc = np.array([])
-                if proc.__contains__(-1):
-                    proc = np.delete(proc, np.where(proc == -1))
-
-        return level_info
-
-    def tr_fet_values_to_chr_values(self, dt_fet_values: np.ndarray, idx: int) -> np.ndarray:
-        indiv = self.population[idx]
-        chr_fet_values = np.zeros(self.length_of_chromosome)
-        x_ = []
-        for i in range(self.length_of_chromosome):
-            if indiv[i] == 1:
-                x_.append(i)
-
-        for idx in range(self.length_of_chromosome):
-            chr_fet_values[x_[idx]] = dt_fet_values[idx]
-
-        return chr_fet_values
-
-    # TODO: Dani csinálja
-    # TODO: weight-ek kiszámolásának módját átnézni.
-    # TODO: Ne legyen az összeg mindíg 1? Check Tomival?
-    # https://www.codecademy.com/article/fe-feature-importance-final
-    # GINI IMPIRITY
-
-    def calc_feature_values(self, tree_level_info: np.ndarray, features: np.ndarray) -> np.ndarray:
-
-        len_ = len(tree_level_info)  # node number in the tree
-        max_level = np.max(tree_level_info) + 1
-        fet_values = np.zeros((len_))
-
-        for i in range(len_):
-            if features[i] != -2:
-                weight_ = (max_level - tree_level_info[i]) / max_level  # 1/7
-                fet_values[features[i]] = fet_values[features[i]] + weight_
-
-        return fet_values
+    # ---
 
