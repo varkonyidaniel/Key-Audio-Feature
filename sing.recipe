@@ -1,5 +1,8 @@
 Bootstrap: docker
 From: python:3.12-alpine
 
+%files
+    requirements.txt
+
 %post
     pip install -r requirements.txt

@@ -15,11 +15,12 @@
 ```python -m pip install -r requirements.txt```
 
 
-Singularity:
+# Server/Singularity:
 
-```sudo singularity build kaf.simg sing.recipe```
+```sudo singularity build /singularity/21_Peter/kaf.simg sing.recipe```
 
 
 
 preprocess:
+```./init.sh```
 
