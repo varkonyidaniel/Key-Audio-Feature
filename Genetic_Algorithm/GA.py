@@ -278,6 +278,7 @@ class GeneticAlgorithm:
                 # TESTED 2025.02.07. - VD
                 # TODO: fitness értéknek növekedőnek kelle lennie, ez akkor jó ha csökken,
                 #  ellentmondást feloldani 1/x-szel , vaahogy?
+                # TODO: jó helyen van ez?egyek kiljebb?
                 for i in range(self.size_of_population):
                     self.fitness_values[i] = \
                         np.median([
