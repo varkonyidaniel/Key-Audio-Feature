@@ -5,6 +5,7 @@ From: python:3.12.6-alpine
     requirements.txt
 
 %post
+    sudo apt install build-essentials
     pip install wheel setuptools pip --upgrade
     pip3 install wheel setuptools pip --upgrade
     pip3 install -r requirements.txt
