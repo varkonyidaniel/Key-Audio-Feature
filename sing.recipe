@@ -1,11 +1,13 @@
 Bootstrap: docker
-From: python:3.12.6-alpine
+From: python:3.10-alpine
 
 %files
     requirements.txt
 
 %post
-    sudo apt install build-essentials
+    su
+    apk update
+    apk add build-base
     pip install wheel setuptools pip --upgrade
     pip3 install wheel setuptools pip --upgrade
     pip3 install -r requirements.txt
