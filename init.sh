@@ -10,7 +10,7 @@
   #SCRIPT= "/home/peter.kiss/SimpleFederatedLearning-master/simulation.py"
 
   SICMD="singularity exec --bind /$HOME/Key-Audio-Feature:/mnt /singularity/21_Peter/kaf.simg"
-  SCRIPT="python3 1_preprocessimg_batch.py"
+  SCRIPT="conda run -n KAF python3 Executables/1_preprocessimg_batch.py"
   set -x
   i=0
   #singularity exec --bind /$HOME/federated_simulations:/mnt /singularity/21_Peter/exp.simg conda run -n FL_trial python3 exp.py

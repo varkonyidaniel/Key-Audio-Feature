@@ -205,7 +205,8 @@ class GeneticAlgorithm:
 
     #TODO: bemenő paramétereket megírni hozzá!!!
     def eval_population(self, num_gen:int, hive_ids:np.ndarray):
-
+        SICMD = "singularity exec --bind /$HOME/Key-Audio-Feature:/mnt /singularity/21_Peter/kaf.simg"
+        SCRIPT = "conda run -n KAF python3 Executables/Eval_Individual.py"
         node_cnt = 10
         img_f_name = "bee_project_2.simg"
         img_f_path = "/singularity/09-daniel-bee_project"
@@ -236,7 +237,25 @@ class GeneticAlgorithm:
                     print("-->",hive,idx_indiv, "started...")
 
                 else:
+                    job_file_name=f"run_scripts/run_ei_{num_gen}_{idx_indiv}.sh"
+                    runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
+                                        str(hive)]
 
+                    content=f"""#!/bin/bash
+                    {SICMD} {SCRIPT} {' '.join(runjob_sh_params)}
+                    """
+                    # Open a file in write mode
+                    with open(job_file_name, "w") as file:
+                        # Use print to write the string to the file
+                        print(content, file=file)
+                    # current_directory = os.getcwd()
+
+                    # Print the current working directory
+                    # print("Current Working Directory:", current_directory)
+                    subprocess.Popen(
+                        f"sbatch --nodelist=node4 -vv {job_file_name}")
+
+                    '''
                     p = Process(target=self.start_slurm_proc(),
                                 args=(self,num_gen,idx_indiv,node_idx,
                                       img_f_path,img_f_name,path_run_job_sh,hive))
@@ -245,7 +264,7 @@ class GeneticAlgorithm:
                     active_processes.append(p)
                     for proc in active_processes:
                         proc.join()
-
+                    '''
                 # Execution waits here until last's start
 
         # Start slurm process --> runjob.sh --> Exacutables/Eval_Individual.py 4 params
