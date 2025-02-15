@@ -1,0 +1,16 @@
+name: KAF
+channels:
+  - pytorch
+  - conda-forge
+  - anaconda
+  - anaconda-fusion
+dependencies:
+-  python=3.12
+-  scipy
+-  pandas
+-  numpy
+-  scikit-learn
+-  h5py
+-  librosa
+-  matplotlib
+-  statsmodels
