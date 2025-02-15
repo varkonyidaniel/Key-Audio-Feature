@@ -1,4 +1,10 @@
+import sys,os
+sys.path.append(os.path.abspath('../Genetic_Algorithm'))
+sys.path.append(os.path.abspath('../Outputs'))
+
 from Genetic_Algorithm import GA as ga
+
+
 import numpy as np
 import Outputs.data_writter as dw
 import Outputs.data_reader as dr

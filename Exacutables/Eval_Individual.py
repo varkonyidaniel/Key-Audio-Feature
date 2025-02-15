@@ -1,4 +1,5 @@
-import os, argparse
+import os, argparse,sys
+sys.path.append(os.path.abspath('../Enum'))
 
 import h5py
 import numpy as np

@@ -1,4 +1,7 @@
 import sys, os, glob
+sys.path.append(os.path.abspath('../Enum'))
+sys.path.append(os.path.abspath('../Feature_Extraction'))
+
 import Enum.enum_types as et
 from scipy.io import wavfile
 from Feature_Extraction import feature_extractor as fe
