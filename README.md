@@ -16,11 +16,14 @@
 
 
 # Server/Singularity:
+- sing image
 
 ```sudo singularity build /singularity/21_Peter/kaf.simg sing.recipe```
 
+- move data (already there the test):
+```scp -P 10024 -r DATA/WAV  peter.kiss@157.181.176.110:/Key-Audio-Feature/DATA/WAV```
 
 
-preprocess:
+- preprocess:
 ```./init.sh```
 

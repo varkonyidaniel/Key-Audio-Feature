@@ -9,5 +9,5 @@ From: python:3.10-alpine
     apk update
     apk add build-base
     pip install wheel setuptools pip --upgrade
-    pip3 install wheel setuptools pip --upgrade
-    pip3 install -r requirements.txt
+    pip install scipy pandas numpy scikit-learn h5py librosa matplotlib statsmodels
+
