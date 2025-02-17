@@ -1,11 +1,9 @@
 import random, subprocess, os, sys, fnmatch
 import numpy as np
-from Enum.enum_types import Regression_method as rm
 from operator import itemgetter
-from multiprocessing import Process,Manager
 from time import sleep
-import h5py
 import joblib
+from multiprocessing import Process
 
 
 # https://www.datacamp.com/tutorial/genetic-algorithm-python
@@ -222,8 +220,11 @@ class GeneticAlgorithm:
         # hive_id: 25,26,27
         # indiv idx: 1, ... , 500
 
-        for hive in hive_ids:
-            for idx_indiv in range(self.size_of_population):
+        #for hive in hive_ids:
+        for hive in [26]:
+
+            #for idx_indiv in range(self.size_of_population):
+            for idx_indiv in range(2):
                 if self.local_test:
                     runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index",str(idx_indiv),"--hive_id", str(hive)]
                     #current_directory = os.getcwd()
@@ -237,34 +238,45 @@ class GeneticAlgorithm:
                     print("-->",hive,idx_indiv, "started...")
 
                 else:
-                    job_file_name=f"run_scripts/run_ei_{num_gen}_{idx_indiv}.sh"
-                    runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
-                                        str(hive)]
-
-                    content=f"""#!/bin/bash
-                    {SICMD} {SCRIPT} {' '.join(runjob_sh_params)}
-                    """
-                    # Open a file in write mode
-                    with open(job_file_name, "w") as file:
-                        # Use print to write the string to the file
-                        print(content, file=file)
-                    # current_directory = os.getcwd()
-
-                    # Print the current working directory
-                    # print("Current Working Directory:", current_directory)
-                    subprocess.Popen(
-                        f"sbatch --nodelist=node4 -vv {job_file_name}")
-
-                    '''
-                    p = Process(target=self.start_slurm_proc(),
-                                args=(self,num_gen,idx_indiv,node_idx,
-                                      img_f_path,img_f_name,path_run_job_sh,hive))
+                    p = Process(target=self.start_slurm_proc,
+                                 args=(num_gen,idx_indiv,node_idx,
+                                       img_f_path,img_f_name,path_run_job_sh,hive,))
 
                     p.start()
                     active_processes.append(p)
                     for proc in active_processes:
                         proc.join()
-                    '''
+
+
+
+                    # job_file_name=f"run_scripts/run_ei_{num_gen}_{idx_indiv}.sh"
+                    # runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
+                    #                     str(hive)]
+                    #
+                    # content=f"""#!/bin/bash
+                    # {SICMD} {SCRIPT} {' '.join(runjob_sh_params)}
+                    # """
+                    # # Open a file in write mode
+                    # with open(job_file_name, "w") as file:
+                    #     # Use print to write the string to the file
+                    #     print(content, file=file)
+                    # # current_directory = os.getcwd()
+                    #
+                    # # Print the current working directory
+                    # # print("Current Working Directory:", current_directory)
+                    # subprocess.Popen(
+                    #     f"sbatch --nodelist=node4 -vv {job_file_name}")
+                    #
+                    # '''
+                    # p = Process(target=self.start_slurm_proc(),
+                    #             args=(self,num_gen,idx_indiv,node_idx,
+                    #                   img_f_path,img_f_name,path_run_job_sh,hive))
+                    #
+                    # p.start()
+                    # active_processes.append(p)
+                    # for proc in active_processes:
+                    #     proc.join()
+                    # '''
                 # Execution waits here until last's start
 
         # Start slurm process --> runjob.sh --> Exacutables/Eval_Individual.py 4 params

@@ -30,7 +30,7 @@ if __name__ == "__main__":
     hive_id = 26
     #select_k = 20
     hive_ids = [25,26,27]
-    local_test=True
+    local_test=False
     if local_test:
         hive_id = 22
         hive_ids = [22]
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     parser.add_argument('--fitness_limit', type=int, help='hive id',default=11)
     parser.add_argument('--num_important_features', type=int, help='hive id',default=5)
     parser.add_argument('--select_k', type=int, help='hive id',default=20)
-    parser.add_argument('--n_generation', type=int, help='hive id',default=0)
+    #parser.add_argument('--n_generation', type=int, help='hive id',default=0)
 
     # Parse the arguments
     args = parser.parse_args()
