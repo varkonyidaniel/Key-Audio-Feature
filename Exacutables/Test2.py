@@ -1,42 +1,75 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.tree import export_graphviz
 
 if __name__ == "__main__":
-    dataset = np.array(
-        [['Asset Flip', 100, 1000],
-         ['Text Based', 500, 3000],
-         ['Visual Novel', 1500, 5000],
-         ['2D Pixel Art', 3500, 8000],
-         ['2D Vector Art', 5000, 6500],
-         ['Strategy', 6000, 7000],
-         ['First Person Shooter', 8000, 15000],
-         ['Simulator', 9500, 20000],
-         ['Racing', 12000, 21000],
-         ['RPG', 14000, 25000],
-         ['Sandbox', 15500, 27000],
-         ['Open-World', 16500, 30000],
-         ['MMOFPS', 25000, 52000],
-         ['MMORPG', 30000, 80000]
-         ])
-    X = dataset[:, 1:2].astype(int)
-    y = dataset[:, 2].astype(int)
-    # print y
-    print(y)
-    print(X)
-    regressor = DecisionTreeRegressor(random_state=0)
-    regressor.fit(X, y)
-    y_pred = regressor.predict([[3750]])
-    print("Predicted price: % d\n" % y_pred)
 
-    X_grid = np.arange(min(X), max(X), 0.01)
-    X_grid = X_grid.reshape((len(X_grid), 1))
-    plt.scatter(X, y, color='red')
-    plt.plot(X_grid, regressor.predict(X_grid), color='blue')
-    plt.title('Profit to Production Cost (Decision Tree Regression)')
-    plt.xlabel('Production Cost')
-    plt.ylabel('Profit')
-    plt.show()
+
+    if __name__ == "__main__":
+
+        size_of_population = 2
+        length_of_chromosome = 4
+        avg_idx_value = {}
+        feature_importance = {}
+
+        feature_importance[(0, 25, 'LR')] = np.array([0.1,0.2,0.3,0])
+        feature_importance[(0, 26, 'LR')] = np.array([0.2,0.2,0,0.3])
+        feature_importance[(0, 27, 'LR')] = np.array([0.3,0.2,0,0.3])
+        feature_importance[(0, 25, 'DT')] = np.array([0.4,0.2,0.3,0])
+        feature_importance[(0, 26, 'DT')] = np.array([0.5,0,  0.2,0.3])
+        feature_importance[(0, 27, 'DT')] = np.array([0.6,0.2,0,  0.3])
+
+        feature_importance[(1, 25, 'LR')] = np.array([0.1,0.2,0.3,0])
+        feature_importance[(1, 26, 'LR')] = np.array([0.2,0.2,0.3,0])
+        feature_importance[(1, 27, 'LR')] = np.array([0.3,0.2,0.3,0])
+        feature_importance[(1, 25, 'DT')] = np.array([0.1,0.2,0.3,0])
+        feature_importance[(1, 26, 'DT')] = np.array([0.2,0.2,0.3,0])
+        feature_importance[(1, 27, 'DT')] = np.array([0.3,0.2,0.3,0])
+
+
+
+        for i in range(size_of_population):                                         # for all individuals
+            for j in range(length_of_chromosome):                                   # for all genes
+                avg_idx_value[(i, j, 'DT')] = round(np.average(
+                    [v[j] for k, v in feature_importance.items() if i == k[0] and 'DT' == k[2]]), 2)
+
+                avg_idx_value[(i, j, 'LR')] = round(np.average(
+                    [v[j] for k, v in feature_importance.items() if i == k[0] and 'LR' == k[2]]), 2)
+
+        #print(avg_idx_value)
+
+        # feature index = 0, reg = DT
+        DT_indiv_feat_order = {}
+        LR_indiv_feat_order = {}
+
+        for i in range(size_of_population):
+            s = [-v for k, v in avg_idx_value.items() if i == k[0] and 'DT' == k[2]]
+            DT_indiv_feat_order[(i,'DT')] = np.argsort(np.argsort(s, axis=0), axis=0)
+
+            z = [-v for k, v in avg_idx_value.items() if i == k[0] and 'LR' == k[2]]
+            LR_indiv_feat_order[(i, 'LR')] = np.argsort(np.argsort(z, axis=0), axis=0)
+
+        #print(DT_indiv_feat_order, LR_indiv_feat_order)
+
+        avg_pop_feat = np.zeros((size_of_population, length_of_chromosome))
+
+        for j in range(size_of_population):
+            for i in range(length_of_chromosome):
+                avg_pop_feat[j, i] = np.average(
+                    [DT_indiv_feat_order[(j, 'DT')][i],
+                     LR_indiv_feat_order[(j, 'LR')][i]]
+                )
+
+        #print(avg_pop_feat)
+
+        avg_pop = np.zeros(length_of_chromosome)
+
+        for j in range(length_of_chromosome):
+            avg_pop = np.average(avg_pop_feat, axis=0)
+
+        #populáció szinten a feature-ök fontossági sorrendje csökkenő rendben:
+        # sorrendben az indexek kellenek a return értékbe (0,2,1,3)
+
+        print(avg_pop)  # feature-ök relatív fontossági sorrendje csökkenő rendben, innen kellenek az indexek
+
+        res = np.argsort(avg_pop)[:2]
+        print(res)
 

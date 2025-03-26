@@ -1,10 +1,10 @@
-from pcm_2_wav import pcm_to_wav as ptw
+from PCM_to_WAV.pcm_to_wav import pcm_to_wav as ptw
 import glob, os, sys
 
 
 if __name__ == '__main__':
-    source_dir = '/Data/PCM_data'
-    target_dir = '/Data/WAV_data'
+    source_dir = '/DATA/PCM'
+    target_dir = '/DATA/WAV'
 
     #parent directory
     par_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))

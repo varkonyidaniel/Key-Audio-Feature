@@ -3,7 +3,7 @@ sys.path.append(os.path.abspath('../Genetic_Algorithm'))
 sys.path.append(os.path.abspath('../Outputs'))
 
 from Genetic_Algorithm import GA as ga
-
+from multiprocessing import Process
 
 import numpy as np
 import Outputs.data_writter as dw
@@ -63,9 +63,9 @@ if __name__ == "__main__":
 
     print("GENETIC ALGORITHM... START")
 
-    print("Creation + save of initial population to GA object... START")
+    print("    Creation + save of initial population to GA object... START")
     initial_population = ga.init_population()
-    print("Creation + save of initial population to GA object... END")
+    print("    Creation + save of initial population to GA object... END")
 
     # write out all individuals of population
     #TODO
@@ -76,9 +76,9 @@ if __name__ == "__main__":
     # Save eval results and DT objects to GA object.
 
     # write out all fitness values belonging to all individuals
-    print("Evaluation of population 0... START")
+    print("    Evaluation of population 0... START")
     ga.eval_population(0,hive_ids)                       # num_gen = 0, 1st generation
-    print("Evaluation of population 0... END")
+    print("    Evaluation of population 0... END")
 
 
     # write out all individuals of population
@@ -89,9 +89,9 @@ if __name__ == "__main__":
 
     while(n_generation < max_generation):
 
-        print(f"Processing {n_generation}th generation START")
+        print(f"    Processing {n_generation}th generation START")
 
-        print(f"Creation + save of {n_generation}th generation... START")
+        print(f"        Creation + save of {n_generation}th generation... START")
 
         # select n most important feature by DT objects of all individuals
         idx_imp_features = ga.get_most_important_features(args.num_important_features,hive_ids)
@@ -101,15 +101,15 @@ if __name__ == "__main__":
         pop_n = ga.gen_next_generation (args.n_elites,args.mutation_probability,idx_imp_features, args.select_k)
 
 
-        print(f"Creation + save of {n_generation}th generation... END")
+        print(f"        Creation + save of {n_generation}th generation... END")
 
         dw.write_data_to_h5(directory=parent_dir + target_dir,
                             filename=f"{hive_id}_population_{n_generation}",
                             ds_label="population", data=pop_n)
 
-        print(f"Evaluation of population {n_generation}... START")
+        print(f"    Evaluation of population {n_generation}... START")
         ga.eval_population(n_generation,hive_ids)
-        print(f"Evaluation of population {n_generation}... END")
+        print(f"    Evaluation of population {n_generation}... END")
 
         dw.write_data_to_h5(directory=parent_dir + target_dir,
                             filename=f"{hive_id}_population_{n_generation}",
@@ -118,19 +118,19 @@ if __name__ == "__main__":
         # Checking BREAK conditions 1 by 1
         _val = ga.get_best_fitness_value()
 
-        print(f"Checking fitness limit: current value: {_val}, limit:{args.fitness_limit}")
+        print(f"    Checking fitness limit: current value: {_val}, limit:{args.fitness_limit}")
         if _val >= args.fitness_limit:
-            print(f"Limit raching: TRUE")
+            print(f"        Limit raching: TRUE")
             break
-        print(f"Limit raching: FALSE")
+        print(f"        Limit raching: FALSE")
 
-        print(f"Early stopping check... START")
+        print(f"    Early stopping check... START")
         # if best score was not changing for multiple rounds
         if ga.early_stopping_check():
-            print(f"Early stopping! Threshold reached!")
+            print(f"        Early stopping! Threshold reached!")
             break
-        print(f"Early stopping check... END")
-        print(f"Processing {n_generation}th generation END")
+        print(f"    Early stopping check... END")
+        print(f"    Processing {n_generation}th generation END")
 
         n_generation = n_generation + 1
 
