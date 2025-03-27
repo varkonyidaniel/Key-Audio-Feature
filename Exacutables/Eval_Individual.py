@@ -52,26 +52,30 @@ import pandas as pd
 
 
 def get_individual_data(hive_id: int, num_gen: int, individual_idx: int) -> pd.DataFrame:
-    with open(f"../DATA/targets_{hive_id}.joblib", 'rb') as f:
-        entry = joblib.load(f)
-        # print(entry)
-        detection_time = entry[str(Event_type.BROOD)]
-        detection_time = datetime.datetime(detection_time.year, detection_time.month, detection_time.day)
+    def get_detection_time(hive_id):
+        with open(f"../DATA/targets_{hive_id}.joblib", 'rb') as f:
+            entry = joblib.load(f)
+            # print(entry)
+            detection_time = entry[str(Event_type.BROOD)]
+            detection_time = datetime.datetime(detection_time.year, detection_time.month, detection_time.day)
+            return detection_time
     with open("../DATA/feature_list_with_dim.joblib", 'rb') as f:
         fl = joblib.load(f)
         mapping = {name: dim[0] for name, dim in fl.items()}
 
-    if individual_idx:
-        _population = dr.read_h5_file("../DATA/LOG/", f"{hive_id}_population_{num_gen}.h5", "population")
-        _chromosomes = _population[individual_idx]
-    else:
-        all_features_count = sum(mapping.values())
-        _chromosomes = np.random.choice([0, 1], size=(all_features_count,), p=[9. / 10, 1. / 10])
-    per_feature_group_chromosomes = get_feature_group_chromosomes(_chromosomes, mapping)
-
+    def get_per_feature_group_chromosomes_for_hive(hive_id: int, mapping):
+        if individual_idx:
+            _population = dr.read_h5_file("../DATA/LOG/", f"{hive_id}_population_{num_gen}.h5", "population")
+            _chromosomes = _population[individual_idx]
+        else:
+            all_features_count = sum(mapping.values())
+            _chromosomes = np.random.choice([0, 1], size=(all_features_count,), p=[9. / 10, 1. / 10])
+        return get_feature_group_chromosomes(_chromosomes, mapping),_chromosomes
+    #TODO csak az első hive kódját nézzük!!!
+    per_feature_group_chromosomes,_chromosomes=get_per_feature_group_chromosomes_for_hive(hive_ids[0], mapping)
     # print("feature names",per_feature_group_chromosomes.keys())
 
-    d = get_data(hive_id, per_feature_group_chromosomes, detection_time)
+    d = pd.concat([get_data(hive_id, per_feature_group_chromosomes, get_detection_time(hive_id)) for hive_id in hive_ids])
     return d, _chromosomes
 
     # turn chromosomes to concrete numbers a.k.a. MAPPING
@@ -305,11 +309,16 @@ def importance_to_full_list(importance_list, chromosome_list):
     return [importance_list.pop(0) if i == 1 else 0 for i in chromosome_list]
 
 
-def eval_individual(num_gen: int, indiv_index: int, hive_id: int):
+def eval_individual(num_gen: int, indiv_index: int, hive_ids: list[int]):
     print("Eval_Individual.py/eval_individual is running")
-    if hive_id not in detection_times.keys():
-        print(f"No Foul brood in hive {str(hive_id)}")
-    data, chromosomes = get_individual_data(hive_id, num_gen, indiv_index)
+    '''
+    obsolete
+    for hive_id in hive_ids:
+        if hive_id not in detection_times.keys():
+            print(f"No Foul brood in hive {str(hive_id)}")
+            hive_ids.remove(hive_id)
+    '''
+    data, chromosomes = get_individual_data(hive_ids, num_gen, indiv_index)
     pd_y = data['seconds_to_detection']
     pd_X = data.drop(columns=['seconds_to_detection'])
 
@@ -329,7 +338,7 @@ def eval_individual(num_gen: int, indiv_index: int, hive_id: int):
     lr_stats['all_data_importance'] = importance_to_full_list(lr_stats['importance'], chromosome_list=chromosomes)
 
     dir = "../DATA/LOG/"
-    fn = f"hive_{hive_id}_gen_{num_gen}_indiv_{indiv_index}.joblib"
+    fn = f"hive_{'-'.join(hive_ids)}_gen_{num_gen}_indiv_{indiv_index}.joblib"
 
     # Check if directory exists
     if not os.path.exists(dir):
@@ -346,10 +355,12 @@ if __name__ == "__main__":
     print(sys.argv)
     num_gen = int(sys.argv[1])
     indiv_idx = int(sys.argv[2])
-    hive_id = int(sys.argv[3])
+    # should be "[a,b]"
+    hive_id_string = sys.argv[3]
+    hive_ids=[int(x) for x in hive_id_string.replace("[","").replace("]","").split(",")]
 
     print("Evaluation of individual START")
-    eval_individual(num_gen, indiv_idx, hive_id)
+    eval_individual(num_gen, indiv_idx, hive_ids)
     print("Evaluation of individual END")
 
 # parser = argparse.ArgumentParser(description="A simple example of argparse")

@@ -33,7 +33,7 @@ if __name__ == "__main__":
     local_test=False
     if local_test:
         hive_id = 22
-        hive_ids = [22]
+        hive_ids = [22,26]
         max_generation=2
     parser = argparse.ArgumentParser(description="A simple example of argparse")
     # Add arguments

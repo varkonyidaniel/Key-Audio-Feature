@@ -223,65 +223,67 @@ class GeneticAlgorithm:
         # hive_id: 25,26,27
         # indiv idx: 1, ... , 500
 
-        # for hive in hive_ids:
-        print(f"hive ids: {hive_ids}")
-        for hive in [26]:
-            for idx_indiv in range(2):
-                # for idx_indiv in range(self.size_of_population):
-                if self.local_test:
-                    runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
-                                        str(hive)]
-                    # current_directory = os.getcwd()
+        #for hive in hive_ids:
+        #print(f"hive ids: {hive_ids}")
+        #for hive in [26]:
+        for idx_indiv in range(2):
+            # for idx_indiv in range(self.size_of_population):
+            if self.local_test:
+                #runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
+                #                    str(hive)]
+                runjob_sh_params = [str(num_gen), str(idx_indiv),
+                                    str(hive_ids)]
+                # current_directory = os.getcwd()
 
-                    # Print the current working directory
-                    # print("Current Working Directory:", current_directory)
-                    # TODO WINDOWS:
-                    subprocess.Popen(
-                        ["../venv/Scripts/python.exe", "../Exacutables/Eval_Individual.py"] + runjob_sh_params)
-                    # TODO UNIX (?):
-                    # subprocess.Popen(["../venv/bin/python", "../Exacutables/Eval_Individual.py"]+runjob_sh_params)
-                    print("-->", hive, idx_indiv, "started...")
+                # Print the current working directory
+                # print("Current Working Directory:", current_directory)
+                # TODO WINDOWS:
+                subprocess.Popen(
+                    ["../venv/Scripts/python.exe", "../Exacutables/Eval_Individual.py"] + runjob_sh_params)
+                # TODO UNIX (?):
+                # subprocess.Popen(["../venv/bin/python", "../Exacutables/Eval_Individual.py"]+runjob_sh_params)
+                print("-->", hive_ids, idx_indiv, "started...")
 
-                else:
-                    print("else case: multi slurm process start")
-                    p = Process(target=self.start_slurm_proc,
-                                args=(num_gen, idx_indiv, node_idx,
-                                      img_f_path, img_f_name, path_eval_indiv, hive,))
+            else:
+                print("else case: multi slurm process start")
+                p = Process(target=self.start_slurm_proc,
+                            args=(num_gen, idx_indiv, node_idx,
+                                  img_f_path, img_f_name, path_eval_indiv, hive,))
 
-                    p.start()
-                    active_processes.append(p)
-                    for proc in active_processes:
-                        proc.join()
+                p.start()
+                active_processes.append(p)
+                for proc in active_processes:
+                    proc.join()
 
-                    # job_file_name=f"run_scripts/run_ei_{num_gen}_{idx_indiv}.sh"
-                    # runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
-                    #                     str(hive)]
-                    #
-                    # content=f"""#!/bin/bash
-                    # {SICMD} {SCRIPT} {' '.join(runjob_sh_params)}
-                    # """
-                    # # Open a file in write mode
-                    # with open(job_file_name, "w") as file:
-                    #     # Use print to write the string to the file
-                    #     print(content, file=file)
-                    # # current_directory = os.getcwd()
-                    #
-                    # # Print the current working directory
-                    # # print("Current Working Directory:", current_directory)
-                    # subprocess.Popen(
-                    #     f"sbatch --nodelist=node4 -vv {job_file_name}")
-                    #
-                    # '''
-                    # p = Process(target=self.start_slurm_proc(),
-                    #             args=(self,num_gen,idx_indiv,node_idx,
-                    #                   img_f_path,img_f_name,path_run_job_sh,hive))
-                    #
-                    # p.start()
-                    # active_processes.append(p)
-                    # for proc in active_processes:
-                    #     proc.join()
-                    # '''
-                # Execution waits here until last's start
+                # job_file_name=f"run_scripts/run_ei_{num_gen}_{idx_indiv}.sh"
+                # runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
+                #                     str(hive)]
+                #
+                # content=f"""#!/bin/bash
+                # {SICMD} {SCRIPT} {' '.join(runjob_sh_params)}
+                # """
+                # # Open a file in write mode
+                # with open(job_file_name, "w") as file:
+                #     # Use print to write the string to the file
+                #     print(content, file=file)
+                # # current_directory = os.getcwd()
+                #
+                # # Print the current working directory
+                # # print("Current Working Directory:", current_directory)
+                # subprocess.Popen(
+                #     f"sbatch --nodelist=node4 -vv {job_file_name}")
+                #
+                # '''
+                # p = Process(target=self.start_slurm_proc(),
+                #             args=(self,num_gen,idx_indiv,node_idx,
+                #                   img_f_path,img_f_name,path_run_job_sh,hive))
+                #
+                # p.start()
+                # active_processes.append(p)
+                # for proc in active_processes:
+                #     proc.join()
+                # '''
+            # Execution waits here until last's start
 
         # Start slurm process --> runjob.sh --> Exacutables/Eval_Individual.py 4 params
         # TODO: Peti
