@@ -305,6 +305,9 @@ def importance_to_full_list(importance_list, chromosome_list):
     return [importance_list.pop(0) if i == 1 else 0 for i in chromosome_list]
 
 
+# ezt a 4 paramétert kapod!!!! f"{num_gen} {idx_indiv} {tr_hive_ids} {ts_hive_ids}"
+# hive_id-t le kell cserélni a fenti 2-re!!!
+
 def eval_individual(num_gen: int, indiv_index: int, hive_id: int):
     print("Eval_Individual.py/eval_individual is running")
     if hive_id not in detection_times.keys():
