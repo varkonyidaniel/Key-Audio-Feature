@@ -309,6 +309,10 @@ def importance_to_full_list(importance_list, chromosome_list):
     return [importance_list.pop(0) if i == 1 else 0 for i in chromosome_list]
 
 
+# ezt a 4 paramétert kapod!!!! f"{num_gen} {idx_indiv} {tr_hive_ids} {ts_hive_ids}"
+# hive_id-t le kell cserélni a fenti 2-re!!!
+
+def eval_individual(num_gen: int, indiv_index: int, hive_id: int):
 def eval_individual(num_gen: int, indiv_index: int, hive_ids: list[int]):
     print("Eval_Individual.py/eval_individual is running")
     '''
@@ -338,7 +342,7 @@ def eval_individual(num_gen: int, indiv_index: int, hive_ids: list[int]):
     lr_stats['all_data_importance'] = importance_to_full_list(lr_stats['importance'], chromosome_list=chromosomes)
 
     dir = "../DATA/LOG/"
-    fn = f"hive_{'-'.join(hive_ids)}_gen_{num_gen}_indiv_{indiv_index}.joblib"
+    fn = f"hive_{hive_id}_gen_{num_gen}_indiv_{indiv_index}.joblib"
 
     # Check if directory exists
     if not os.path.exists(dir):
@@ -355,12 +359,10 @@ if __name__ == "__main__":
     print(sys.argv)
     num_gen = int(sys.argv[1])
     indiv_idx = int(sys.argv[2])
-    # should be "[a,b]"
-    hive_id_string = sys.argv[3]
-    hive_ids=[int(x) for x in hive_id_string.replace("[","").replace("]","").split(",")]
+    hive_id = int(sys.argv[3])
 
     print("Evaluation of individual START")
-    eval_individual(num_gen, indiv_idx, hive_ids)
+    eval_individual(num_gen, indiv_idx, hive_id)
     print("Evaluation of individual END")
 
 # parser = argparse.ArgumentParser(description="A simple example of argparse")
