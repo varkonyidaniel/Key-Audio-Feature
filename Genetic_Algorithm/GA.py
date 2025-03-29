@@ -33,16 +33,18 @@ class GeneticAlgorithm:
 
         self.feature_importance = {}
         self.results = {}
+        self.test_results = {}
 
         # self.DTs = {}
         # self.max_reg = np.array([])
         # individual is a list of numbers a.k.a: index of not zero genes a.k.a:
         # the selected features for furter steps
         self.local_test = local_test
+        """
         if self.local_test:
             self.size_of_population = 2
             self.length_of_chromosome = 5
-
+        """
     # generate individual - private function
     def __generate_individual(self) -> np.ndarray:
         # generate "len_of_chr" number of values from [0,1]
@@ -135,13 +137,13 @@ class GeneticAlgorithm:
     def gen_next_generation(self, n_elites: int, mutation_prob: float,
                             idx_imp_features: np.ndarray,
                             selection_k: int) -> np.ndarray:
-
         shape = self.population.shape
         next_generation = np.zeros(shape)
         next_gens_fitness = np.zeros((self.size_of_population))
 
         # keep elite individuals and fitness values
         elite_idxs = self.get_n_best_individuals(n_elites)
+
         next_generation[elite_idxs] = self.population[elite_idxs]
         next_gens_fitness[elite_idxs] = self.fitness_values[elite_idxs]
 
@@ -235,10 +237,10 @@ class GeneticAlgorithm:
         for i in range(self.size_of_population):  # for all individuals
             for j in range(self.length_of_chromosome):  # for all genes
                 avg_idx_value[(i, j, 'DT')] = round(np.average(
-                    [v[j] for k, v in self.feature_importance.items() if i == k[0] and 'DT' == k[2]]), 2)
+                    [v[j] for k, v in self.feature_importance.items() if i == k[0] and 'DT' == k[1]]), 2)
 
                 avg_idx_value[(i, j, 'LR')] = round(np.average(
-                    [v[j] for k, v in self.feature_importance.items() if i == k[0] and 'LR' == k[2]]), 2)
+                    [v[j] for k, v in self.feature_importance.items() if i == k[0] and 'LR' == k[1]]), 2)
 
         # minden egyedre vesszük a feature-ök sorrendjét külön DT/LR szerint a korábban kisz. átlagok alapján
         # (0, 0, 'LR'): 0.2; (0, 1, 'LR'): 0.2; (0, 2, 'LR'): 0.1; (0, 3, 'LR'): 0.2 -->
@@ -317,7 +319,7 @@ class GeneticAlgorithm:
         log_dir = "../DATA/LOG"
         node_idx = 2  # 1,2,3,6-nál hogyan állítjuk be???
         metric = "MSE"
-        log_pattern = f"hive_*_gen_*_indiv_*.joblib"
+        log_pattern = f"gen_*_indiv_*.joblib"
         active_processes = []
         term = 120
         # nth generation processing
@@ -326,65 +328,66 @@ class GeneticAlgorithm:
         # indiv idx: 1, ... , 500
 
         # for hive in hive_ids:
-        print(f"hive ids: {hive_ids}")
-        for hive in [26]:
-            for idx_indiv in range(2):
-                # for idx_indiv in range(self.size_of_population):
-                if self.local_test:
-                    runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
-                                        str(hive)]
-                    # current_directory = os.getcwd()
+        #print(f"hive ids: {hive_ids}")
+        #for hive in [26]:
+        for idx_indiv in range(self.size_of_population):
+            # for idx_indiv in range(self.size_of_population):
+            if self.local_test:
+                #runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
+                #                    str(hive)]
+                runjob_sh_params = [ str(num_gen),  str(idx_indiv), str(tr_hive_ids), str(ts_hive_ids)]
+                # current_directory = os.getcwd()
 
-                    # Print the current working directory
-                    # print("Current Working Directory:", current_directory)
-                    # TODO WINDOWS:
-                    subprocess.Popen(
-                        ["../venv/Scripts/python.exe", "../Exacutables/Eval_Individual.py"] + runjob_sh_params)
-                    # TODO UNIX (?):
-                    # subprocess.Popen(["../venv/bin/python", "../Exacutables/Eval_Individual.py"]+runjob_sh_params)
-                    print("-->", hive, idx_indiv, "started...")
+                # Print the current working directory
+                # print("Current Working Directory:", current_directory)
+                # TODO WINDOWS:
+                subprocess.Popen(
+                    ["../venv/Scripts/python.exe", "../Exacutables/Eval_Individual.py"] + runjob_sh_params)
+                # TODO UNIX (?):
+                # subprocess.Popen(["../venv/bin/python", "../Exacutables/Eval_Individual.py"]+runjob_sh_params)
+                print("-->", idx_indiv, "started...")
 
-                else:
-                    print("else case: multi slurm process start")
-                    p = Process(target=self.start_slurm_proc,
-                                args=(num_gen, idx_indiv, node_idx,
-                                      img_f_path, img_f_name, path_eval_indiv,
-                                      tr_hive_ids,ts_hive_ids,))
+            else:
+                print("else case: multi slurm process start")
+                p = Process(target=self.start_slurm_proc,
+                            args=(num_gen, idx_indiv, node_idx,
+                                  img_f_path, img_f_name, path_eval_indiv,
+                                  tr_hive_ids,ts_hive_ids,))
 
-                    p.start()
-                    active_processes.append(p)
-                    for proc in active_processes:
-                        proc.join()
+                p.start()
+                active_processes.append(p)
+                for proc in active_processes:
+                    proc.join()
 
-                    # job_file_name=f"run_scripts/run_ei_{num_gen}_{idx_indiv}.sh"
-                    # runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
-                    #                     str(hive)]
-                    #
-                    # content=f"""#!/bin/bash
-                    # {SICMD} {SCRIPT} {' '.join(runjob_sh_params)}
-                    # """
-                    # # Open a file in write mode
-                    # with open(job_file_name, "w") as file:
-                    #     # Use print to write the string to the file
-                    #     print(content, file=file)
-                    # # current_directory = os.getcwd()
-                    #
-                    # # Print the current working directory
-                    # # print("Current Working Directory:", current_directory)
-                    # subprocess.Popen(
-                    #     f"sbatch --nodelist=node4 -vv {job_file_name}")
-                    #
-                    # '''
-                    # p = Process(target=self.start_slurm_proc(),
-                    #             args=(self,num_gen,idx_indiv,node_idx,
-                    #                   img_f_path,img_f_name,path_run_job_sh,hive))
-                    #
-                    # p.start()
-                    # active_processes.append(p)
-                    # for proc in active_processes:
-                    #     proc.join()
-                    # '''
-                # Execution waits here until last's start
+                # job_file_name=f"run_scripts/run_ei_{num_gen}_{idx_indiv}.sh"
+                # runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
+                #                     str(hive)]
+                #
+                # content=f"""#!/bin/bash
+                # {SICMD} {SCRIPT} {' '.join(runjob_sh_params)}
+                # """
+                # # Open a file in write mode
+                # with open(job_file_name, "w") as file:
+                #     # Use print to write the string to the file
+                #     print(content, file=file)
+                # # current_directory = os.getcwd()
+                #
+                # # Print the current working directory
+                # # print("Current Working Directory:", current_directory)
+                # subprocess.Popen(
+                #     f"sbatch --nodelist=node4 -vv {job_file_name}")
+                #
+                # '''
+                # p = Process(target=self.start_slurm_proc(),
+                #             args=(self,num_gen,idx_indiv,node_idx,
+                #                   img_f_path,img_f_name,path_run_job_sh,hive))
+                #
+                # p.start()
+                # active_processes.append(p)
+                # for proc in active_processes:
+                #     proc.join()
+                # '''
+            # Execution waits here until last's start
 
 
         # Start slurm process --> runjob.sh --> Exacutables/Eval_Individual.py 4 params
@@ -396,44 +399,48 @@ class GeneticAlgorithm:
 
         if self.local_test:
             term = 10
-        while (self.size_of_population * len(hive_ids) > self.n_finished_slurm_jobs(log_dir, log_pattern)):
+        while (self.size_of_population * (num_gen+1)  > self.n_finished_slurm_jobs(log_dir, log_pattern)):
             print(f"main process: num of finished jobs: {self.n_finished_slurm_jobs(log_dir, log_pattern)}")
             print("main process: wait for subprocess to be completted...")
             sleep(term)
 
         print("main process:all subjobs finished, progress continue!")
         # Read all data from files created by Eval_Individual.pys
-        for hive in hive_ids:
-            for i in range(self.size_of_population):  # far all individual
-                file = joblib.load(f"../DATA/LOG/hive_{hive}_gen_{num_gen}_indiv_{i}.joblib")
 
-                for key in file.keys():  # LR / DTR / SVR
-                    _data = file.get(key)  # _data = lr_stats / dtr_stats / svr_stats
+        for i in range(self.size_of_population):  # far all individual
+            file = joblib.load(f"../DATA/LOG/gen_{num_gen}_indiv_{i}.joblib")
 
-                    # save MSEs to GA object
-                    self.results[(i, hive, key)] = _data['"MSE"']
+            for key in file.keys():  # LR / DTR / SVR
+                _data = file.get(key)  # _data = lr_stats / dtr_stats / svr_stats
 
-                    # Save feature importance to GA object
-                    if not key == 'SVR':
-                        self.feature_importance[(i, hive, key)] = _data['all_data_importance']
+                # save MSEs to GA object
+                # TODO miért '""'????
+                #self.results[(i, key)] = _data['"MSE"']
+                #self.test_results[(i, key)] = _data['"test_mse"']
+                self.results[(i, key)] = _data['MSE']
+                self.test_results[(i, key)] = _data['test_mse']
 
-                # TESTED 2025.02.07. - VD
-                # TODO: fitness értéknek növekedőnek kelle lennie, ez akkor jó ha csökken,
-                #  ellentmondást feloldani 1/x-szel , vaahogy?
-                # TODO: jó helyen van ez?egyek kiljebb?
-                for i in range(self.size_of_population):
-                    self.fitness_values[i] = \
-                        np.median([
-                            np.average([v for k, v in self.results.items() if i == k[0] and 'SVR' == k[2]]),
-                            np.average([v for k, v in self.results.items() if i == k[0] and 'LR' == k[2]]),
-                            np.average([v for k, v in self.results.items() if i == k[0] and 'DTR' == k[2]])
-                        ])
+                # Save feature importance to GA object
+                if not key == 'SVR':
+                    self.feature_importance[(i, key)] = _data['all_data_importance']
 
-                # for key in file.keys():                                     # for all keys
-                #   if key == "DT_model":                                   # if key is dt
-                #       self.DTs[(i,hive)] = file.get(key)                  # save dt object
-                #   else:                                                   # else: key --> result
-                #       _res = file.get(key)[metric]
-                #       if _res > self.fitness_values[i]:                   # save max result
-                #           self.fitness_values[i] = _res                   # save max fitness
-                #           self.max_reg[i] = key                           # save best regressor
+            # TESTED 2025.02.07. - VD
+            # TODO: fitness értéknek növekedőnek kelle lennie, ez akkor jó ha csökken,
+            #  ellentmondást feloldani 1/x-szel , vaahogy?
+            # TODO: jó helyen van ez?egyek kiljebb?
+            for i in range(self.size_of_population):
+                self.fitness_values[i] = \
+                    np.median([
+                        np.average([v for k, v in self.results.items() if i == k[0] and 'SVR' == k[1]]),
+                        np.average([v for k, v in self.results.items() if i == k[0] and 'LR' == k[1]]),
+                        np.average([v for k, v in self.results.items() if i == k[0] and 'DTR' == k[1]])
+                    ])
+
+            # for key in file.keys():                                     # for all keys
+            #   if key == "DT_model":                                   # if key is dt
+            #       self.DTs[(i,hive)] = file.get(key)                  # save dt object
+            #   else:                                                   # else: key --> result
+            #       _res = file.get(key)[metric]
+            #       if _res > self.fitness_values[i]:                   # save max result
+            #           self.fitness_values[i] = _res                   # save max fitness
+            #           self.max_reg[i] = key                           # save best regressor

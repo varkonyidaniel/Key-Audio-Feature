@@ -51,7 +51,7 @@ def get_feature_group_chromosomes(chromosomes, mapping):
 import pandas as pd
 
 
-def get_individual_data(hive_id: int, num_gen: int, individual_idx: int) -> pd.DataFrame:
+def get_individual_data(tr_hive_ids: list[int],ts_hive_ids: list[int], num_gen: int, individual_idx: int) -> pd.DataFrame:
     def get_detection_time(hive_id):
         with open(f"../DATA/targets_{hive_id}.joblib", 'rb') as f:
             entry = joblib.load(f)
@@ -63,20 +63,22 @@ def get_individual_data(hive_id: int, num_gen: int, individual_idx: int) -> pd.D
         fl = joblib.load(f)
         mapping = {name: dim[0] for name, dim in fl.items()}
 
-    def get_per_feature_group_chromosomes_for_hive(hive_id: int, mapping):
-        if individual_idx:
-            _population = dr.read_h5_file("../DATA/LOG/", f"{hive_id}_population_{num_gen}.h5", "population")
-            _chromosomes = _population[individual_idx]
-        else:
-            all_features_count = sum(mapping.values())
-            _chromosomes = np.random.choice([0, 1], size=(all_features_count,), p=[9. / 10, 1. / 10])
+    def get_per_feature_group_chromosomes_for_hive( mapping):
+        #if individual_idx:
+        _population = dr.read_h5_file("../DATA/LOG/", f"population_{num_gen}.h5", "population")
+        _chromosomes = _population[individual_idx]
+        #else:
+        #    all_features_count = sum(mapping.values())
+        #    _chromosomes = np.random.choice([0, 1], size=(all_features_count,), p=[9. / 10, 1. / 10])
         return get_feature_group_chromosomes(_chromosomes, mapping),_chromosomes
-    #TODO csak az első hive kódját nézzük!!!
-    per_feature_group_chromosomes,_chromosomes=get_per_feature_group_chromosomes_for_hive(hive_ids[0], mapping)
-    # print("feature names",per_feature_group_chromosomes.keys())
 
-    d = pd.concat([get_data(hive_id, per_feature_group_chromosomes, get_detection_time(hive_id)) for hive_id in hive_ids])
-    return d, _chromosomes
+    per_feature_group_chromosomes,_chromosomes=get_per_feature_group_chromosomes_for_hive(mapping)
+    # print("feature names",per_feature_group_chromosomes.keys())
+    tr_ds_s=[get_data(hive_id, per_feature_group_chromosomes, get_detection_time(hive_id)) for hive_id in tr_hive_ids]
+    ts_ds_s=[get_data(hive_id, per_feature_group_chromosomes, get_detection_time(hive_id)) for hive_id in ts_hive_ids]
+    tr_d = pd.concat([get_data(hive_id, per_feature_group_chromosomes, get_detection_time(hive_id)).reset_index(drop=True) for hive_id in tr_hive_ids],ignore_index=True)
+    ts_d = pd.concat([get_data(hive_id, per_feature_group_chromosomes, get_detection_time(hive_id)).reset_index(drop=True) for hive_id in ts_hive_ids],ignore_index=True)
+    return tr_d,ts_d, _chromosomes
 
     # turn chromosomes to concrete numbers a.k.a. MAPPING
 
@@ -94,7 +96,6 @@ def read_data_from_file_name(filename):
 preprocessed_data_path = "../DATA/FE/"
 import datetime
 
-data_per_date = {}
 timestamp_per_date = {}
 
 from pandas.api.types import is_complex_dtype
@@ -107,6 +108,8 @@ detection_times = {22: datetime.datetime(2020, 7, 30), 30: datetime.datetime(202
 # def get_data(hive_id:int, per_feature_group_chromosomes:dict[str,list[int]],detection_time:datetime.datetime) -> list:
 def get_data(hive_id: int, per_feature_group_chromosomes: dict, detection_time: datetime.datetime) -> list:
     # print('FNS: ', feature_names)
+    data_per_date = {}
+
     for file in os.listdir(preprocessed_data_path):
         if (file.startswith(str(hive_id))):
             for feature_name, chromosomes in per_feature_group_chromosomes.items():
@@ -128,6 +131,7 @@ def get_data(hive_id: int, per_feature_group_chromosomes: dict, detection_time: 
                     feature_df.index = feature_df.index.map(lambda x: f"{fn}-{f}-{x}")
                     to_keep_feture_names = [f"{fn}-{f}-{index}" for index, value in
                                             enumerate(per_feature_group_chromosomes[feature_name]) if value == 1]
+                    #print(to_keep_feture_names)
                     feature_df = feature_df.T
                     feature_df = feature_df[to_keep_feture_names]
                     to_convert = []
@@ -157,8 +161,10 @@ def get_data(hive_id: int, per_feature_group_chromosomes: dict, detection_time: 
                         timestamp_df=pd.DataFrame(dates)
                         '''
                         data_per_date[date_and_time] = pd.concat([timestamp_df, feature_df], axis=1)
+
                     else:
                         data_per_date[date_and_time] = pd.concat([data_per_date[date_and_time], feature_df], axis=1)
+                    #print(hive_id,date_and_time, data_per_date[date_and_time].columns)
     data = pd.concat(data_per_date.values()).reset_index(drop=True)
     data.to_csv('../DATA/test_concat_data.csv')
     return data
@@ -217,7 +223,7 @@ class LinearRegression_Stats(linear_model.LinearRegression):
 '''
 
 
-def train_DTR(X_train, y_train):
+def train_DTR(X_train, y_train,X_test,y_test):
     param_grid = {
         'max_depth': [10, 20],
     }
@@ -229,12 +235,17 @@ def train_DTR(X_train, y_train):
     best_params = grid_search.best_params_
     print("DTR best params", best_params)
     mse = -grid_search.best_score_
-    return {"model_class": "DTR", "MSE": mse, "params": best_params, 'importance': model.feature_importances_.tolist()}
+    y_hat=model.predict(X_test)
+    test_mse=mean_squared_error(y_test, y_hat)
+    print('DTR best mse:', mse)
+    print("DTR TEST mse:", test_mse)
+    return {"model_class": "DTR", "MSE": mse, "params": best_params, 'importance': model.feature_importances_.tolist(),"test_mse": test_mse}
 
     # predictions = model.predict(X_test)
 
 
-def train_SVR(X_train, y_train):
+def train_SVR(X_train, y_train,X_test,y_test):
+    print("same Features",all([x==y for x,y in zip(X_train.columns,X_test.columns)]))
     param_grid = {
         'kernel': ["poly", "rbf"],
         'C': [0.5]
@@ -247,9 +258,13 @@ def train_SVR(X_train, y_train):
     # model = grid_search.best_estimator_
     best_params = grid_search.best_params_
     mse = -grid_search.best_score_
+    y_hat = grid_search.predict(X_test)
+    test_mse = mean_squared_error(y_test, y_hat)
     print('SVR best params:', best_params)
     print('SVR best mse:', mse)
-    return {"model_class": "SVR", "MSE": mse, "params": best_params}
+    print("SVR TEST mse:", test_mse)
+
+    return {"model_class": "SVR", "MSE": mse, "params": best_params,"test_mse": test_mse}
     # predictions = model.predict(X_test)
 
 
@@ -260,11 +275,12 @@ from sklearn.model_selection import train_test_split
 from scipy import stats
 
 
-def train_LR(X_train, y_train):
+def train_LR(X_train, y_train,X_test,y_test):
     # Calculate p-value using statsmodels
     X_with_const = sm.add_constant(X_train)  # Add a constant term for the intercept
+    X_ts_with_const = sm.add_constant(X_test)  # Add a constant term for the intercept
 
-    kf = KFold(n_splits=5, shuffle=True, random_state=1)
+    kf = KFold(n_splits=3, shuffle=True, random_state=1)
 
     # Initialize a list to store the mean squared errors
     mse_list = []
@@ -286,7 +302,9 @@ def train_LR(X_train, y_train):
         # Calculate and store the mean squared error
         mse = mean_squared_error(test_y, predictions)
         if mse > best_mse:
-            best_model = model.params
+            best_model_params = model.params
+            best_model=model
+            best_mse=mse
         p_value = model.pvalues
         p_value.name = len(p_list)
         p_list.append(p_value)
@@ -299,10 +317,15 @@ def train_LR(X_train, y_train):
     print(f'Average MSE: {average_mse:.4f}')
     print(f'p-value: {average_p}')
     # p= importance_to_full_list(average_p,chromosome_list=chr)
-    print("Cross-validation scores:", average_mse)
-    print("Mean cross-validation score:", mse)
+    print("LR mse:", average_mse)
+    print(X_test.head())
+
+    y_hat = best_model.predict(X_ts_with_const)
+    test_mse = mean_squared_error(y_test, y_hat)
+    print("LR TEST mse:", test_mse)
+
     # print('SVR best params:', best_params)
-    return {"model_class": "LR", "MSE": mse, "params": best_model, 'importance': average_p.to_list()}
+    return {"model_class": "LR", "MSE": mse, "params": best_model_params, 'importance': average_p.to_list(),"test_mse": test_mse}
 
 
 def importance_to_full_list(importance_list, chromosome_list):
@@ -312,8 +335,7 @@ def importance_to_full_list(importance_list, chromosome_list):
 # ezt a 4 paramétert kapod!!!! f"{num_gen} {idx_indiv} {tr_hive_ids} {ts_hive_ids}"
 # hive_id-t le kell cserélni a fenti 2-re!!!
 
-def eval_individual(num_gen: int, indiv_index: int, hive_id: int):
-def eval_individual(num_gen: int, indiv_index: int, hive_ids: list[int]):
+def eval_individual(num_gen: int, indiv_index: int, tr_hive_ids: list[int], ts_hive_ids: list[int]):
     print("Eval_Individual.py/eval_individual is running")
     '''
     obsolete
@@ -322,27 +344,31 @@ def eval_individual(num_gen: int, indiv_index: int, hive_ids: list[int]):
             print(f"No Foul brood in hive {str(hive_id)}")
             hive_ids.remove(hive_id)
     '''
-    data, chromosomes = get_individual_data(hive_ids, num_gen, indiv_index)
-    pd_y = data['seconds_to_detection']
-    pd_X = data.drop(columns=['seconds_to_detection'])
-
+    tr_data,ts_data, chromosomes = get_individual_data(tr_hive_ids,ts_hive_ids, num_gen, indiv_index)
+    tr_pd_y = tr_data['seconds_to_detection']
+    tr_pd_X = tr_data.drop(columns=['seconds_to_detection'])
+    ts_pd_y = ts_data['seconds_to_detection']
+    ts_pd_X = ts_data.drop(columns=['seconds_to_detection'])
+    print("NAN in y_train",np.any(np.isnan(tr_pd_y)))
     print("SVR train START")
-    svr_stats = train_SVR(pd_X, pd_y)
+    print("X_train shape",tr_pd_X.shape)
+    print("X_test shape",ts_pd_X.shape)
+    svr_stats = train_SVR(tr_pd_X, tr_pd_y,ts_pd_X, ts_pd_y)
     print("SVR train END")
 
     print("DTR train START")
-    dtr_stats = train_DTR(pd_X, pd_y)
+    dtr_stats = train_DTR(tr_pd_X, tr_pd_y,ts_pd_X, ts_pd_y)
     print("DTR train END")
 
     print("LR train START")
-    lr_stats = train_LR(pd_X, pd_y)
+    lr_stats = train_LR(tr_pd_X, tr_pd_y,ts_pd_X, ts_pd_y)
     print("LR train START")
 
     dtr_stats['all_data_importance'] = importance_to_full_list(dtr_stats['importance'], chromosome_list=chromosomes)
     lr_stats['all_data_importance'] = importance_to_full_list(lr_stats['importance'], chromosome_list=chromosomes)
 
     dir = "../DATA/LOG/"
-    fn = f"hive_{hive_id}_gen_{num_gen}_indiv_{indiv_index}.joblib"
+    fn = f"gen_{num_gen}_indiv_{indiv_index}.joblib"
 
     # Check if directory exists
     if not os.path.exists(dir):
@@ -359,10 +385,11 @@ if __name__ == "__main__":
     print(sys.argv)
     num_gen = int(sys.argv[1])
     indiv_idx = int(sys.argv[2])
-    hive_id = int(sys.argv[3])
+    tr_hive_ids = [int(ids) for ids in sys.argv[3].replace('[','').replace(']','').split(' ')]
+    ts_hive_ids = [int(ids) for ids in sys.argv[4].replace('[','').replace(']','').split(' ')]
 
     print("Evaluation of individual START")
-    eval_individual(num_gen, indiv_idx, hive_id)
+    eval_individual(num_gen, indiv_idx, tr_hive_ids,ts_hive_ids)
     print("Evaluation of individual END")
 
 # parser = argparse.ArgumentParser(description="A simple example of argparse")
