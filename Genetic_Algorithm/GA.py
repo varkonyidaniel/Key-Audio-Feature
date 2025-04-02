@@ -394,8 +394,14 @@ class GeneticAlgorithm:
         # TODO: amiket a self.n_finished_slurm_jobs fv megszámo!!!!
 
 
+
+
+
         if self.local_test:
             term = 10
+
+
+
         while (self.size_of_population * len(hive_ids) > self.n_finished_slurm_jobs(log_dir, log_pattern)):
             print(f"main process: num of finished jobs: {self.n_finished_slurm_jobs(log_dir, log_pattern)}")
             print("main process: wait for subprocess to be completted...")
