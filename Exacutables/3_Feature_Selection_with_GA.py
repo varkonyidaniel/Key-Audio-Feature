@@ -42,7 +42,6 @@ if __name__ == "__main__":
     source_dir = "/DATA/FE"
     target_dir = "/DATA/LOG"
     parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-    local_test = False
     n_generation = 0
 
     #hive_id = 26
@@ -72,8 +71,21 @@ if __name__ == "__main__":
     Size_of_Population, Lengt_of_Chromosome, Early_Stopping_Max, \
     max_generation, n_elites, mutation_prob, fitness_trsh, \
     num_important_features, tourn_sel_k,tr_hive_ids, ts_hive_ids = check_input_params(sys.argv)
-
-
+    #hack
+    local_test= ts_hive_ids[0] in tr_hive_ids
+    if local_test:
+        Size_of_Population=4
+        n_elites=2
+        Lengt_of_Chromosome=5
+        tourn_sel_k=4
+    '''
+    if local_test:
+        
+        import joblib
+        with open("../DATA/feature_list_with_dim.joblib", 'rb') as f:
+            fl = joblib.load(f)
+            Lengt_of_Chromosome = sum([dim[0] for dim in fl.values()])
+    '''
     print("Checking directories... START")
     dw.check_directories(parent_dir,source_dir, target_dir)
     print("Checking directories... END")
