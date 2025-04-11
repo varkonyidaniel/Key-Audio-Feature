@@ -9,7 +9,7 @@ import os
 #import argparse
 
 def check_input_params(argv:list):
-    if len(argv) != 12:
+    if len(argv) != 14:
         print(f"wrong number of params {argv}")
         exit(3)
     else:
@@ -25,16 +25,17 @@ def check_input_params(argv:list):
             tournament_k = int(argv[9])
             tr_hive_ids = np.fromstring(argv[10],sep=',', dtype=int)
             ts_hive_ids = np.fromstring(argv[11],sep=',', dtype=int)
+            working_node_ids = np.fromstring(argv[12],sep=',', dtype=int)
+            wait_sec = int(argv[13])
 
             return S_of_Pop, L_of_Chr, E_Stp_Max, max_gen, n_elites, mut_prob, \
-                   fit_limit, num_imp_feat, tournament_k, tr_hive_ids, ts_hive_ids
+                   fit_limit, num_imp_feat, tournament_k, tr_hive_ids, ts_hive_ids, \
+                   working_node_ids,wait_sec
         except Exception as ex:
             print(ex.with_traceback())
 
 
-
 #TODO: fitness limitet úgy beállítani, hogy 1 napnál ne legyen nagyobb az átlagos tévedés!!
-
 
 
 if __name__ == "__main__":
@@ -70,14 +71,19 @@ if __name__ == "__main__":
 
     Size_of_Population, Lengt_of_Chromosome, Early_Stopping_Max, \
     max_generation, n_elites, mutation_prob, fitness_trsh, \
-    num_important_features, tourn_sel_k,tr_hive_ids, ts_hive_ids = check_input_params(sys.argv)
+    num_important_features, tourn_sel_k,tr_hive_ids, ts_hive_ids, \
+    working_node_ids,wait_sec = check_input_params(sys.argv)
+
+
     #hack
+
     local_test= ts_hive_ids[0] in tr_hive_ids
     if local_test:
         Size_of_Population=4
         n_elites=2
         Lengt_of_Chromosome=5
         tourn_sel_k=4
+
     '''
     if local_test:
         
@@ -86,6 +92,8 @@ if __name__ == "__main__":
             fl = joblib.load(f)
             Lengt_of_Chromosome = sum([dim[0] for dim in fl.values()])
     '''
+
+
     print("Checking directories... START")
     dw.check_directories(parent_dir,source_dir, target_dir)
     print("Checking directories... END")
@@ -108,7 +116,9 @@ if __name__ == "__main__":
 
     # evaluate all individuals, count fitness values belonging to all individuals
     print("        Evaluation of population 0... START")
-    ga.eval_population(n_generation,tr_hive_ids, ts_hive_ids) # num_gen = 0, 1st generation
+
+    # num_gen = 0, 1st generation
+    ga.eval_population(n_generation,tr_hive_ids, ts_hive_ids, working_node_ids, wait_sec)
     print("        Evaluation of population 0... END")
 
     # write out all fitness values belonging to the population
@@ -138,7 +148,7 @@ if __name__ == "__main__":
                             ds_label="population", data=pop_n)
 
         print(f"        Evaluation of population {n_generation}... START")
-        ga.eval_population(n_generation,tr_hive_ids, ts_hive_ids)
+        ga.eval_population(n_generation,tr_hive_ids, ts_hive_ids,working_node_ids,wait_sec)
         print(f"        Evaluation of population {n_generation}... END")
 
         # evaluate all individuals, count fitness values belonging to all individuals

@@ -45,6 +45,7 @@ class GeneticAlgorithm:
             self.size_of_population = 2
             self.length_of_chromosome = 5
         """
+
     # generate individual - private function
     def __generate_individual(self) -> np.ndarray:
         # generate "len_of_chr" number of values from [0,1]
@@ -85,8 +86,6 @@ class GeneticAlgorithm:
         best_fitness = max(self.fitness_values)
         return best_fitness
 
-    #-----------------
-
     # https://algorithmafternoon.com/books/genetic_algorithm/chapter04/
     def selection(self, tournament_k) -> np.ndarray:
         _candidates_idxs = random.sample(range(self.size_of_population), tournament_k)
@@ -115,8 +114,6 @@ class GeneticAlgorithm:
                     indiv[i] = abs(indiv[i] - 1)
         return indiv
 
-    #-----------------
-
     # best score not changing, early stop after some rounds
     def early_stopping_check(self):
         # no change in the best score
@@ -132,7 +129,6 @@ class GeneticAlgorithm:
             self.current_best_fitness = self.early_stopping_last_value
             self.early_stopping_count = 0
         return False
-
 
     def gen_next_generation(self, n_elites: int, mutation_prob: float,
                             idx_imp_features: np.ndarray,
@@ -161,19 +157,15 @@ class GeneticAlgorithm:
 
         self.population = next_generation
         return next_generation
-
     # return index list
     def get_n_best_individuals(self, n: int) -> np.ndarray:
         # indexes of individuals with largest fitness values, n pieces
         top_indeces = np.argpartition(self.fitness_values, -n)[-n:]
         return top_indeces
 
-    #-----------------
-
     # number of logfiles according to a give pattern
     def n_finished_slurm_jobs(self, log_dir: str, file_name_pattern: str):
         return len(fnmatch.filter(os.listdir(f"{log_dir}"), f"{file_name_pattern}"))
-
 
     def start_slurm_proc(self, num_gen: int, idx_indiv: int, node_id: int,
                          img_f_path: str, img_f_name: str, path_eval_indiv: str,
@@ -202,137 +194,42 @@ class GeneticAlgorithm:
         print(f"start_slurm_proc fc: {idx_indiv}th slurm process ... STARR")
 
 
-
-
-
-
-
-
-    # ------------------    EDDIG ÁTNÉZVE 2025.03.27.   ------------------
-
-
-
-
-
-
-
-
-
-
-
-    #TODO: új adatminőség függvényében ezt át kell nézni! Lehet, hogy sokkal egyszerűbb lesz.
-
     def get_most_important_features(self, num_features: int):
 
-        avg_idx_value = {}
-        # i = egyed index, hive = 25,26,27, key = LR/DT
-        # self.feature_importance[(i, hive, key)] = _data['all_data_importance']
+        # in eval_population function
+        # self.feature_importance[(i, key)] = _data['all_data_importance']
+        # key = LR / DTR / SVR
+        # i = individual index
 
-        # Minden egyedre és minden kromoszómára külön vesszük a 3 DT/LR forrás alapján a fontosságok átlagát
-        #         feature_importance[(0, 25, 'LR')] = np.array([0.1,0.2,0.3,0])
-        #         feature_importance[(0, 26, 'LR')] = np.array([0.2,0.2,0,0.3])
-        #         feature_importance[(0, 27, 'LR')] = np.array([0.3,0.2,0,0.3]) -->
-
-        #       (0, 0, 'LR'): 0.2; (0, 1, 'LR'): 0.2; (0, 2, 'LR'): 0.1; (0, 3, 'LR'): 0.2
-
-        for i in range(self.size_of_population):  # for all individuals
-            for j in range(self.length_of_chromosome):  # for all genes
-                avg_idx_value[(i, j, 'DT')] = round(np.average(
-                    [v[j] for k, v in self.feature_importance.items() if i == k[0] and 'DT' == k[1]]), 2)
-
-                avg_idx_value[(i, j, 'LR')] = round(np.average(
-                    [v[j] for k, v in self.feature_importance.items() if i == k[0] and 'LR' == k[1]]), 2)
-
-        # minden egyedre vesszük a feature-ök sorrendjét külön DT/LR szerint a korábban kisz. átlagok alapján
-        # (0, 0, 'LR'): 0.2; (0, 1, 'LR'): 0.2; (0, 2, 'LR'): 0.1; (0, 3, 'LR'): 0.2 -->
-        #  (0, 'LR'): array([0, 1, 3, 2]) FONTOS!!! CSökkenő sorrend van itt (NAGY -> KICSI)!
-
-        DT_indiv_feat_order = {}
-        LR_indiv_feat_order = {}
+        f_rank_by_indiv_DT = {}
+        f_rank_by_indiv_LR = {}
 
         for i in range(self.size_of_population):
-            s = [-v for k, v in avg_idx_value.items() if i == k[0] and 'DT' == k[2]]
-            DT_indiv_feat_order[(i, 'DT')] = np.argsort(np.argsort(s, axis=0), axis=0)
+            f_rank_by_indiv_DT[(i, 'DT')] = np.argsort(np.argsort(self.feature_importance[(i, 'DT')]))
+            f_rank_by_indiv_LR[(i, 'LR')] = np.argsort(np.argsort(self.feature_importance[(i, 'LR')]))
 
-            z = [-v for k, v in avg_idx_value.items() if i == k[0] and 'LR' == k[2]]
-            LR_indiv_feat_order[(i, 'LR')] = np.argsort(np.argsort(z, axis=0), axis=0)
+        f_avg_order = [np.mean(k) for k in zip(
+            np.array(list(f_rank_by_indiv_DT.values())).mean(axis=0),
+            np.array(list(f_rank_by_indiv_LR.values())).mean(axis=0))]
 
-        # minden egyedre vesszük a DT és az LR alapján a sorrendekből vett egyedszintű átlagos feature sorrendet
-        # csökkenő sorrendek átlaga, átlagos csökkenő sorrend of features to each egyed
-        # {(0, 'DT'): array([0, 3, 2, 1]);  (1, 'DT'): array([1, 2, 0, 3])}
-        # {(0, 'LR'): array([0, 1, 3, 2]);  (1, 'LR'): array([1, 2, 0, 3])} -->
-        # [                 [0. 2. 2.5 1.5]                  [1. 2. 0. 3. ]]
-
-        avg_pop_feat = np.zeros((self.size_of_population, self.length_of_chromosome))
-
-        for j in range(self.size_of_population):
-            for i in range(self.length_of_chromosome):
-                avg_pop_feat[j, i] = np.average(
-                    [DT_indiv_feat_order[(j, 'DT')][i],
-                     LR_indiv_feat_order[(j, 'LR')][i]]
-                )
-
-        # az egyedek feature sorrendje alapján képezzük a populáció szintű feature sorrendet
-        # az egyedek sorrendjeinek átlaga alapján
-        # átlagos csökkenő sorrend of features to population
-
-        #  [0. 2. 2.5 1.5] [1. 2. 0. 3. ] --> [0.5  2.   1.25 2.25] <-- [0 2 1 3]
-
-        avg_pop = np.zeros(self.length_of_chromosome)
-
-        for j in range(self.length_of_chromosome):
-            avg_pop = -np.average(avg_pop_feat, axis=0)
-
-        # [0.5  2.   1.25 2.25] < -- [0 2 1 3]
-        # a feature-ök sorrendje egy csökkenő rendszerben populáció szinten
-        # res-be a 0. sorszámú index kell (0), majd az 1. sorszámú (2), ...
-
-        # feature_values_by_indiv = {}
-
-        # for idx in range(self.size_of_population):         # for all individual
-        #    for hive in hive_ids:
-
-        # dt_tree_level_info = self.create_level_info(self.DTs[(idx,hive)].tree_.children_left,
-        #                                         self.DTs[(idx,hive)].tree_.children_right)
-
-        # dt_feature_value = self.calc_feature_values(dt_tree_level_info,
-        #                                            self.DTs[(idx,hive)].tree_.feature)
-
-        # feature_values_by_indiv[(idx,hive)] = self.tr_fet_values_to_chr_values(dt_feature_value,idx)
-
-        # order_features = self.calc_order(feature_values_by_indiv)
-
-        return np.argsort(avg_pop)[:num_features]
+        return np.argsort(f_avg_order)[:num_features]
 
 
-    #TODO: bemenő paramétereket megírni hozzá!!!
-    #TODO: tr_hive_id és ts_hive_id felhasználás megírása
-    def eval_population(self, num_gen: int, tr_hive_ids: np.ndarray, ts_hive_ids:np.ndarray):
-
-
+    def eval_population(self, num_gen: int, tr_hive_ids: np.ndarray, ts_hive_ids:np.ndarray,
+                        working_node_ids:np.ndarray, wait_sec:int):
 
         SICMD = "singularity exec --bind /$HOME/Key-Audio-Feature:/mnt /singularity/21_Peter/kaf.simg"
         SCRIPT = "conda run -n KAF python3 Executables/Eval_Individual.py"
-        node_cnt = 10
         img_f_name = "key_audio.simg"  # "bee_project_2.simg"
         img_f_path = "/singularity/09-daniel-bee_project"
         path_eval_indiv = "/home/daniel.varkonyi/KEY_AUDIO/Executables/Eval_Individual.py"
         log_dir = "../DATA/LOG"
-        node_idx = 2  # 1,2,3,6-nál hogyan állítjuk be???
-        metric = "MSE"
         log_pattern = f"gen_*_indiv_*.joblib"
         active_processes = []
-        term = 120
-        # nth generation processing
 
-        # hive_id: 25,26,27
         # indiv idx: 1, ... , 500
 
-        # for hive in hive_ids:
-        #print(f"hive ids: {hive_ids}")
-        #for hive in [26]:
         for idx_indiv in range(self.size_of_population):
-            # for idx_indiv in range(self.size_of_population):
             if self.local_test:
                 #runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
                 #                    str(hive)]
@@ -347,105 +244,51 @@ class GeneticAlgorithm:
                 # TODO UNIX (?):
                 # subprocess.Popen(["../venv/bin/python", "../Exacutables/Eval_Individual.py"]+runjob_sh_params)
                 print("-->", idx_indiv, "started...")
+                waitting_term = 10
 
             else:
+
+                # [2,3,4,6,7,9]
+                cnt_work_nodes = len(working_node_ids)
+                node_idx = working_node_ids[idx_indiv%cnt_work_nodes]
+
+                # start multiple Eval_Indivual
                 print("else case: multi slurm process start")
                 p = Process(target=self.start_slurm_proc,
                             args=(num_gen, idx_indiv, node_idx,
                                   img_f_path, img_f_name, path_eval_indiv,
                                   tr_hive_ids,ts_hive_ids,))
-
                 p.start()
                 active_processes.append(p)
                 for proc in active_processes:
                     proc.join()
+        # Execution waits here until last's start
 
-                # job_file_name=f"run_scripts/run_ei_{num_gen}_{idx_indiv}.sh"
-                # runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
-                #                     str(hive)]
-                #
-                # content=f"""#!/bin/bash
-                # {SICMD} {SCRIPT} {' '.join(runjob_sh_params)}
-                # """
-                # # Open a file in write mode
-                # with open(job_file_name, "w") as file:
-                #     # Use print to write the string to the file
-                #     print(content, file=file)
-                # # current_directory = os.getcwd()
-                #
-                # # Print the current working directory
-                # # print("Current Working Directory:", current_directory)
-                # subprocess.Popen(
-                #     f"sbatch --nodelist=node4 -vv {job_file_name}")
-                #
-                # '''
-                # p = Process(target=self.start_slurm_proc(),
-                #             args=(self,num_gen,idx_indiv,node_idx,
-                #                   img_f_path,img_f_name,path_run_job_sh,hive))
-                #
-                # p.start()
-                # active_processes.append(p)
-                # for proc in active_processes:
-                #     proc.join()
-                # '''
-            # Execution waits here until last's start
+        # Start slurm process --> runjob.sh --> Exacutables/Eval_Individual.py
 
-
-        # Start slurm process --> runjob.sh --> Exacutables/Eval_Individual.py 4 params
-        # TODO: Peti
-        # TODO: teszt szekvenciális eval individula hívás 3-szor egymás után a práhuzamosság helyett+
-        # TODO: akkor jó az ellenőrzés, ha a futás legvégén generálódik le a logfile,
-        # TODO: amiket a self.n_finished_slurm_jobs fv megszámo!!!!
-
-
-
-
-
-        if self.local_test:
-            term = 10
-        while (self.size_of_population * (num_gen+1)  > self.n_finished_slurm_jobs(log_dir, log_pattern)):
-        #while (self.size_of_population * len(hive_ids) > self.n_finished_slurm_jobs(log_dir, log_pattern)):
-            print(f"main process: num of finished jobs: {self.n_finished_slurm_jobs(log_dir, log_pattern)}")
-            print("main process: wait for subprocess to be completted...")
-            sleep(term)
+        n_fin_jobs = self.n_finished_slurm_jobs(log_dir, log_pattern)
+        while (self.size_of_population * (num_gen+1) > n_fin_jobs):     # num_gen 0-tól indul ezért kell a +1
+            print(f"main process: num of finished jobs: {n_fin_jobs}, sleep: {wait_sec}")
+            sleep(wait_sec)
 
         print("main process:all subjobs finished, progress continue!")
+
         # Read all data from files created by Eval_Individual.pys
 
-        for i in range(self.size_of_population):  # far all individual
+        for i in range(self.size_of_population):                                # far all individual
             file = joblib.load(f"../DATA/LOG/gen_{num_gen}_indiv_{i}.joblib")
 
-            for key in file.keys():  # LR / DTR / SVR
+            for key in file.keys():   # SVR / DTR / LR : svr_stats / dtr_stats / lr_stats
                 _data = file.get(key)  # _data = lr_stats / dtr_stats / svr_stats
-
-                # save MSEs to GA object
-                # TODO miért '""'????
-                #self.results[(i, key)] = _data['"MSE"']
-                #self.test_results[(i, key)] = _data['"test_mse"']
                 self.results[(i, key)] = _data['MSE']
                 self.test_results[(i, key)] = _data['test_mse']
-
-                # Save feature importance to GA object
                 if not key == 'SVR':
                     self.feature_importance[(i, key)] = _data['all_data_importance']
 
-            # TESTED 2025.02.07. - VD
-            # TODO: fitness értéknek növekedőnek kelle lennie, ez akkor jó ha csökken,
-            #  ellentmondást feloldani 1/x-szel , vaahogy?
-            # TODO: jó helyen van ez?egyek kiljebb?
             for i in range(self.size_of_population):
                 self.fitness_values[i] = \
                     np.median([
-                        np.average([v for k, v in self.results.items() if i == k[0] and 'SVR' == k[1]]),
-                        np.average([v for k, v in self.results.items() if i == k[0] and 'LR' == k[1]]),
-                        np.average([v for k, v in self.results.items() if i == k[0] and 'DTR' == k[1]])
+                        self.results.get((i, 'SVR')),
+                        self.results.get((i, 'LR')),
+                        self.results.get((i, 'DTR'))
                     ])
-
-            # for key in file.keys():                                     # for all keys
-            #   if key == "DT_model":                                   # if key is dt
-            #       self.DTs[(i,hive)] = file.get(key)                  # save dt object
-            #   else:                                                   # else: key --> result
-            #       _res = file.get(key)[metric]
-            #       if _res > self.fitness_values[i]:                   # save max result
-            #           self.fitness_values[i] = _res                   # save max fitness
-            #           self.max_reg[i] = key                           # save best regressor
