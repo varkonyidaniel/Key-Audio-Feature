@@ -177,9 +177,12 @@ class GeneticAlgorithm:
             sys.exit(1)
 
         obj_name = f"node_{node_id}_gen_{num_gen}_indiv_{idx_indiv}_"\
-                   f"tr_{tr_hive_ids.replace(',','_')}_ts_{ts_hive_ids.replace(',','_')}"
+                   f"tr_{str(tr_hive_ids).replace('[', '').replace(']', '').replace(' ', '_')}_"\
+                   f"ts_{str(ts_hive_ids).replace('[', '').replace(']', '').replace(' ', '_')}"
 
-        eval_indiv_params = f"{num_gen} {idx_indiv} {tr_hive_ids} {ts_hive_ids}"
+        eval_indiv_params = f"{num_gen} {idx_indiv} "\
+                            f"{str(tr_hive_ids).replace('[', '').replace(']', '').replace(' ',',')} "\
+                            f"{str(ts_hive_ids).replace('[', '').replace(']', '').replace(' ',',')}"
 
         cmd_ = f"/usr/bin/sbatch " \
                f"--output=./slurm_logs/log_job_{obj_name}.out " \
@@ -248,7 +251,6 @@ class GeneticAlgorithm:
 
             else:
 
-                # [2,3,4,6,7,9]
                 cnt_work_nodes = len(working_node_ids)
                 node_idx = working_node_ids[idx_indiv%cnt_work_nodes]
 

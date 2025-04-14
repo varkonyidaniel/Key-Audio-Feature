@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
 import os, argparse, sys
-
-sys.path.append(os.path.abspath('../Enum'))
-
 import h5py
 import numpy as np
 from sklearn.metrics import mean_squared_error
@@ -50,8 +47,14 @@ def get_feature_group_chromosomes(chromosomes, mapping):
 
 import pandas as pd
 
+sys.path.append(os.path.abspath('../Enum'))
 
-def get_individual_data(tr_hive_ids: list[int],ts_hive_ids: list[int], num_gen: int, individual_idx: int) -> pd.DataFrame:
+
+#def get_individual_data(tr_hive_ids: list[int],ts_hive_ids: list[int],
+#                        num_gen: int, individual_idx: int) -> pd.DataFrame:
+def get_individual_data(tr_hive_ids: list,ts_hive_ids: list,
+                        num_gen: int, individual_idx: int) -> pd.DataFrame:
+
     def get_detection_time(hive_id):
         with open(f"../DATA/targets_{hive_id}.joblib", 'rb') as f:
             entry = joblib.load(f)
@@ -81,7 +84,6 @@ def get_individual_data(tr_hive_ids: list[int],ts_hive_ids: list[int], num_gen: 
     return tr_d,ts_d, _chromosomes
 
     # turn chromosomes to concrete numbers a.k.a. MAPPING
-
 
 def get_label_data(hive_id: int):
     pass
@@ -272,7 +274,6 @@ from sklearn.model_selection import train_test_split
 
 # gen_{num_gen}_indiv_{i}_hive_{hive}
 
-from scipy import stats
 
 
 def train_LR(X_train, y_train,X_test,y_test):
@@ -335,7 +336,8 @@ def importance_to_full_list(importance_list, chromosome_list):
 # ezt a 4 paramétert kapod!!!! f"{num_gen} {idx_indiv} {tr_hive_ids} {ts_hive_ids}"
 # hive_id-t le kell cserélni a fenti 2-re!!!
 
-def eval_individual(num_gen: int, indiv_index: int, tr_hive_ids: list[int], ts_hive_ids: list[int]):
+#def eval_individual(num_gen: int, indiv_index: int, tr_hive_ids: list[int], ts_hive_ids: list[int]):
+def eval_individual(num_gen: int, indiv_index: int, tr_hive_ids: list, ts_hive_ids: list):
     print("Eval_Individual.py/eval_individual is running")
     '''
     obsolete
