@@ -292,7 +292,7 @@ class GeneticAlgorithm:
                 self.test_results[(i, key)] = _data['test_mse']
                 if  key != 'SVR':
                     self.feature_importance[(i, key)] = _data['all_data_importance']
-            print('Feature importance', self.feature_importance)
+            #print('Feature importance', self.feature_importance)
         for i in range(self.size_of_population):
             self.fitness_values[i] = \
                 np.median([
