@@ -387,8 +387,8 @@ if __name__ == "__main__":
     print('ARGS',sys.argv,flush=True)
     num_gen = int(sys.argv[1])
     indiv_idx = int(sys.argv[2])
-    tr_hive_ids = [int(ids) for ids in sys.argv[3].replace('[','').replace(']','').split(' ')]
-    ts_hive_ids = [int(ids) for ids in sys.argv[4].replace('[','').replace(']','').split(' ')]
+    tr_hive_ids = [int(ids) for ids in sys.argv[3].split(',')]
+    ts_hive_ids = [int(ids) for ids in sys.argv[4].split(',')]
 
     print("Evaluation of individual START",flush=True)
     eval_individual(num_gen, indiv_idx, tr_hive_ids,ts_hive_ids)
