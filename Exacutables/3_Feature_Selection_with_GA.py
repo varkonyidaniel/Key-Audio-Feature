@@ -174,3 +174,4 @@ if __name__ == "__main__":
         print(f"        Early stopping check... END")
 
     print("GENETIC ALGORITHM... ENDS")
+    ga.print_lr()

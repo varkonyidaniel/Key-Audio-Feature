@@ -1,5 +1,6 @@
 import random, subprocess, os, sys, fnmatch
 import numpy as np
+import pandas as pd
 from operator import itemgetter
 from time import sleep
 import joblib
@@ -208,7 +209,8 @@ class GeneticAlgorithm:
         f_rank_by_indiv_LR = {}
 
         for i in range(self.size_of_population):
-            f_rank_by_indiv_DT[(i, 'DT')] = np.argsort(np.argsort(self.feature_importance[(i, 'DT')]))
+            #TODO óvatossan a regressor nevekkel!!!
+            f_rank_by_indiv_DT[(i, 'DT')] = np.argsort(np.argsort(self.feature_importance[(i, 'DTR')]))
             f_rank_by_indiv_LR[(i, 'LR')] = np.argsort(np.argsort(self.feature_importance[(i, 'LR')]))
 
         f_avg_order = [np.mean(k) for k in zip(
@@ -230,46 +232,49 @@ class GeneticAlgorithm:
         log_pattern = f"gen_*_indiv_*.joblib"
         active_processes = []
 
-        # indiv idx: 1, ... , 500
+        #TODO hack for debug
+        #if (self.size_of_population * (num_gen + 1) >  self.n_finished_slurm_jobs(log_dir, log_pattern)):
+        if True:
+            # indiv idx: 1, ... , 500
+            for idx_indiv in range(self.size_of_population):
+                if self.local_test:
+                    #runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
+                    #                    str(hive)]
+                    runjob_sh_params = [ str(num_gen),  str(idx_indiv), str(tr_hive_ids), str(ts_hive_ids)]
+                    # current_directory = os.getcwd()
 
-        for idx_indiv in range(self.size_of_population):
-            if self.local_test:
-                #runjob_sh_params = ["--num_gen", str(num_gen), "--indiv_index", str(idx_indiv), "--hive_id",
-                #                    str(hive)]
-                runjob_sh_params = [ str(num_gen),  str(idx_indiv), str(tr_hive_ids), str(ts_hive_ids)]
-                # current_directory = os.getcwd()
+                    # Print the current working directory
+                    # print("Current Working Directory:", current_directory)
+                    # TODO WINDOWS:
+                    subprocess.Popen(
+                        ["../venv/Scripts/python.exe", "../Exacutables/Eval_Individual.py"] + runjob_sh_params)
+                    # TODO UNIX (?):
+                    # subprocess.Popen(["../venv/bin/python", "../Exacutables/Eval_Individual.py"]+runjob_sh_params)
+                    print("-->", idx_indiv, "started...")
+                    waitting_term = 10
 
-                # Print the current working directory
-                # print("Current Working Directory:", current_directory)
-                # TODO WINDOWS:
-                subprocess.Popen(
-                    ["../venv/Scripts/python.exe", "../Exacutables/Eval_Individual.py"] + runjob_sh_params)
-                # TODO UNIX (?):
-                # subprocess.Popen(["../venv/bin/python", "../Exacutables/Eval_Individual.py"]+runjob_sh_params)
-                print("-->", idx_indiv, "started...")
-                waitting_term = 10
+                else:
 
-            else:
+                    cnt_work_nodes = len(working_node_ids)
+                    node_idx = working_node_ids[idx_indiv%cnt_work_nodes]
 
-                cnt_work_nodes = len(working_node_ids)
-                node_idx = working_node_ids[idx_indiv%cnt_work_nodes]
-
-                # start multiple Eval_Indivual
-                print("else case: multi slurm process start")
-                p = Process(target=self.start_slurm_proc,
-                            args=(num_gen, idx_indiv, node_idx,
-                                  img_f_path, img_f_name, path_eval_indiv,
-                                  tr_hive_ids,ts_hive_ids,))
-                p.start()
-                active_processes.append(p)
-                for proc in active_processes:
-                    proc.join()
-        # Execution waits here until last's start
+                    # start multiple Eval_Indivual
+                    print("else case: multi slurm process start")
+                    p = Process(target=self.start_slurm_proc,
+                                args=(num_gen, idx_indiv, node_idx,
+                                      img_f_path, img_f_name, path_eval_indiv,
+                                      tr_hive_ids,ts_hive_ids,))
+                    p.start()
+                    active_processes.append(p)
+                    for proc in active_processes:
+                        proc.join()
+            # Execution waits here until last's start
 
         # Start slurm process --> runjob.sh --> Exacutables/Eval_Individual.py
-
-        n_fin_jobs = self.n_finished_slurm_jobs(log_dir, log_pattern)
+        n_fin_jobs=0
         while (self.size_of_population * (num_gen+1) > n_fin_jobs):     # num_gen 0-tól indul ezért kell a +1
+            n_fin_jobs = self.n_finished_slurm_jobs(log_dir, log_pattern)
+
             print(f"main process: num of finished jobs: {n_fin_jobs}, sleep: {wait_sec}")
             sleep(wait_sec)
 
@@ -281,16 +286,21 @@ class GeneticAlgorithm:
             file = joblib.load(f"../DATA/LOG/gen_{num_gen}_indiv_{i}.joblib")
 
             for key in file.keys():   # SVR / DTR / LR : svr_stats / dtr_stats / lr_stats
+                print(f"f{i} key {key}: {file[key]}")
                 _data = file.get(key)  # _data = lr_stats / dtr_stats / svr_stats
                 self.results[(i, key)] = _data['MSE']
                 self.test_results[(i, key)] = _data['test_mse']
-                if not key == 'SVR':
+                if  key != 'SVR':
                     self.feature_importance[(i, key)] = _data['all_data_importance']
+            print('Feature importance', self.feature_importance)
+        for i in range(self.size_of_population):
+            self.fitness_values[i] = \
+                np.median([
+                    self.results.get((i, 'SVR')),
+                    self.results.get((i, 'LR')),
+                    self.results.get((i, 'DTR'))
+                ])
 
-            for i in range(self.size_of_population):
-                self.fitness_values[i] = \
-                    np.median([
-                        self.results.get((i, 'SVR')),
-                        self.results.get((i, 'LR')),
-                        self.results.get((i, 'DTR'))
-                    ])
+    def print_lr(self):
+        joblib.dump(self.results, f"../DATA/LOG/results.joblib")
+        joblib.dump(self.test_results, f"../DATA/LOG/test_results.joblib")

@@ -235,19 +235,19 @@ def train_DTR(X_train, y_train,X_test,y_test):
     grid_search.fit(X_train, y_train)
     model = grid_search.best_estimator_
     best_params = grid_search.best_params_
-    print("DTR best params", best_params)
+    print("DTR best params", best_params,flush=True)
     mse = -grid_search.best_score_
     y_hat=model.predict(X_test)
     test_mse=mean_squared_error(y_test, y_hat)
-    print('DTR best mse:', mse)
-    print("DTR TEST mse:", test_mse)
+    print('DTR best mse:', mse,flush=True)
+    print("DTR TEST mse:", test_mse,flush=True)
     return {"model_class": "DTR", "MSE": mse, "params": best_params, 'importance': model.feature_importances_.tolist(),"test_mse": test_mse}
 
     # predictions = model.predict(X_test)
 
 
 def train_SVR(X_train, y_train,X_test,y_test):
-    print("same Features",all([x==y for x,y in zip(X_train.columns,X_test.columns)]))
+    #print("same Features",all([x==y for x,y in zip(X_train.columns,X_test.columns)]))
     param_grid = {
         'kernel': ["poly", "rbf"],
         'C': [0.5]
@@ -262,9 +262,9 @@ def train_SVR(X_train, y_train,X_test,y_test):
     mse = -grid_search.best_score_
     y_hat = grid_search.predict(X_test)
     test_mse = mean_squared_error(y_test, y_hat)
-    print('SVR best params:', best_params)
-    print('SVR best mse:', mse)
-    print("SVR TEST mse:", test_mse)
+    print('SVR best params:', best_params,flush=True)
+    print('SVR best mse:', mse,flush=True)
+    print("SVR TEST mse:", test_mse,flush=True)
 
     return {"model_class": "SVR", "MSE": mse, "params": best_params,"test_mse": test_mse}
     # predictions = model.predict(X_test)
@@ -315,15 +315,15 @@ def train_LR(X_train, y_train,X_test,y_test):
     average_mse = np.mean(mse_list)
     average_p = pd.concat(p_list, axis=1).T.mean()
     # average_p=map(np.mean, zip(*p_list))
-    print(f'Average MSE: {average_mse:.4f}')
-    print(f'p-value: {average_p}')
+    print(f'Average MSE: {average_mse:.4f}',flush=True)
+    print(f'p-value: {average_p}',flush=True)
     # p= importance_to_full_list(average_p,chromosome_list=chr)
-    print("LR mse:", average_mse)
+    print("LR mse:", average_mse,flush=True)
     print(X_test.head())
 
     y_hat = best_model.predict(X_ts_with_const)
     test_mse = mean_squared_error(y_test, y_hat)
-    print("LR TEST mse:", test_mse)
+    print("LR TEST mse:", test_mse,flush=True)
 
     # print('SVR best params:', best_params)
     return {"model_class": "LR", "MSE": mse, "params": best_model_params, 'importance': average_p.to_list(),"test_mse": test_mse}
@@ -338,7 +338,7 @@ def importance_to_full_list(importance_list, chromosome_list):
 
 #def eval_individual(num_gen: int, indiv_index: int, tr_hive_ids: list[int], ts_hive_ids: list[int]):
 def eval_individual(num_gen: int, indiv_index: int, tr_hive_ids: list, ts_hive_ids: list):
-    print("Eval_Individual.py/eval_individual is running")
+    print("Eval_Individual.py/eval_individual is running",flush=True)
     '''
     obsolete
     for hive_id in hive_ids:
@@ -351,20 +351,20 @@ def eval_individual(num_gen: int, indiv_index: int, tr_hive_ids: list, ts_hive_i
     tr_pd_X = tr_data.drop(columns=['seconds_to_detection'])
     ts_pd_y = ts_data['seconds_to_detection']
     ts_pd_X = ts_data.drop(columns=['seconds_to_detection'])
-    print("NAN in y_train",np.any(np.isnan(tr_pd_y)))
-    print("SVR train START")
-    print("X_train shape",tr_pd_X.shape)
-    print("X_test shape",ts_pd_X.shape)
+    #print("NAN in y_train",np.any(np.isnan(tr_pd_y)))
+    print("SVR train START",flush=True)
+    print("X_train shape",tr_pd_X.shape,flush=True)
+    print("X_test shape",ts_pd_X.shape,flush=True)
     svr_stats = train_SVR(tr_pd_X, tr_pd_y,ts_pd_X, ts_pd_y)
-    print("SVR train END")
+    print("SVR train END",flush=True)
 
-    print("DTR train START")
+    print("DTR train START",flush=True)
     dtr_stats = train_DTR(tr_pd_X, tr_pd_y,ts_pd_X, ts_pd_y)
-    print("DTR train END")
+    print("DTR train END",flush=True)
 
-    print("LR train START")
+    print("LR train START",flush=True)
     lr_stats = train_LR(tr_pd_X, tr_pd_y,ts_pd_X, ts_pd_y)
-    print("LR train START")
+    print("LR train START",flush=True)
 
     dtr_stats['all_data_importance'] = importance_to_full_list(dtr_stats['importance'], chromosome_list=chromosomes)
     lr_stats['all_data_importance'] = importance_to_full_list(lr_stats['importance'], chromosome_list=chromosomes)
@@ -378,21 +378,21 @@ def eval_individual(num_gen: int, indiv_index: int, tr_hive_ids: list, ts_hive_i
         os.makedirs(dir)
 
     res = {'SVR': svr_stats, 'DTR': dtr_stats, 'LR': lr_stats}
-    print("result file creation START")
+    print("result file creation START", f"( => {dir}/{fn})",flush=True)
     joblib.dump(res, f"{dir}/{fn}")
-    print("result file creation END")
+    print("result file creation END",flush=True)
 
 
 if __name__ == "__main__":
-    print(sys.argv)
+    print('ARGS',sys.argv,flush=True)
     num_gen = int(sys.argv[1])
     indiv_idx = int(sys.argv[2])
     tr_hive_ids = [int(ids) for ids in sys.argv[3].replace('[','').replace(']','').split(' ')]
     ts_hive_ids = [int(ids) for ids in sys.argv[4].replace('[','').replace(']','').split(' ')]
 
-    print("Evaluation of individual START")
+    print("Evaluation of individual START",flush=True)
     eval_individual(num_gen, indiv_idx, tr_hive_ids,ts_hive_ids)
-    print("Evaluation of individual END")
+    print("Evaluation of individual END",flush=True)
 
 # parser = argparse.ArgumentParser(description="A simple example of argparse")
 # Add arguments
