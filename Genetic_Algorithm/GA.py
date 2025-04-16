@@ -90,7 +90,8 @@ class GeneticAlgorithm:
     # https://algorithmafternoon.com/books/genetic_algorithm/chapter04/
     def selection(self, tournament_k) -> np.ndarray:
         _candidates_idxs = random.sample(range(self.size_of_population), tournament_k)
-        parent_idxs = sorted(_candidates_idxs, key=lambda i: -self.fitness_values[i])[:-2]  # sorted = növekvő sorrend
+
+        parent_idxs = sorted(_candidates_idxs, key=lambda i: self.fitness_values[i])[-2:]  # sorted = növekvő sorrend
         return itemgetter(*parent_idxs)(self.population)
 
     # 1 point crossover, 2 child
@@ -161,7 +162,7 @@ class GeneticAlgorithm:
     # return index list
     def get_n_best_individuals(self, n: int) -> np.ndarray:
         # indexes of individuals with largest fitness values, n pieces
-        top_indeces = np.argpartition(self.fitness_values, -n)[-n:]
+        top_indeces = np.argpartition(self.fitness_values,-n)[-n:]
         return top_indeces
 
     # number of logfiles according to a give pattern
@@ -295,7 +296,7 @@ class GeneticAlgorithm:
             #print('Feature importance', self.feature_importance)
         for i in range(self.size_of_population):
             self.fitness_values[i] = \
-                np.median([
+                -1*np.median([
                     self.results.get((i, 'SVR')),
                     self.results.get((i, 'LR')),
                     self.results.get((i, 'DTR'))

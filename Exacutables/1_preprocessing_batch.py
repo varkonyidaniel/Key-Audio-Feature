@@ -247,7 +247,11 @@ if __name__ == "__main__":
                ds_label= "timelabels",data=timestamps_str)
         with open(parent_dir+"/DATA/feature_list_with_dim.joblib", 'wb') as f:
             joblib.dump(mapping2, f)
-        target={str(e_event_type):d_event_date}
+        target = {
+                  'type': str(e_event_type),
+                  'date': d_event_date,
+                  'time': t_event_time
+                  }
         with open(parent_dir+f"/DATA/targets_{n_hive_id}.joblib", 'wb') as f:
             joblib.dump(target, f)
 
