@@ -160,12 +160,12 @@ if __name__ == "__main__":
         # Checking BREAK conditions 1 by 1
         _val = ga.get_best_fitness_value()
 
-        print(f"        Checking fitness limit: current value: {_val}, limit:{fitness_trsh} START")
-        if _val >= fitness_trsh:
+        print(f"        Checking fitness limit: current value: {-_val}, limit:{-fitness_trsh} START")
+        if -_val >= -fitness_trsh:
             print(f"        Limit raching: TRUE")
             break
         print(f"        Limit raching: FALSE")
-        print(f"        Checking fitness limit: current value: {_val}, limit:{fitness_trsh} END")
+        print(f"        Checking fitness limit: current value: {-_val}, limit:{-fitness_trsh} END")
 
         print(f"        Early stopping check... START")
         # if best score was not changing for multiple rounds

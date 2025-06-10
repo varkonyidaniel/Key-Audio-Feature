@@ -3,7 +3,7 @@
 import os, argparse, sys
 import h5py
 import numpy as np
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 from Enum.enum_types import Regression_method as rm, Event_type
 from sklearn.tree import DecisionTreeRegressor
@@ -58,10 +58,11 @@ def get_individual_data(tr_hive_ids: list,ts_hive_ids: list,
     def get_detection_time(hive_id):
         with open(f"../DATA/targets_{hive_id}.joblib", 'rb') as f:
             entry = joblib.load(f)
-            # print(entry)
-            detection_time = entry[str(Event_type.BROOD)]
-            detection_time = datetime.datetime(detection_time.year, detection_time.month, detection_time.day)
-            return detection_time
+
+            detection_date = entry['date']
+            detection_time = entry['time']
+            return datetime.datetime.combine(detection_date, detection_time)
+
     with open("../DATA/feature_list_with_dim.joblib", 'rb') as f:
         fl = joblib.load(f)
         mapping = {name: dim[0] for name, dim in fl.items()}
@@ -233,7 +234,10 @@ def train_DTR(X_train, y_train,X_test,y_test):
     }
     dtree_reg = DecisionTreeRegressor(random_state=42)  # Initialize a decision tree regressor
     grid_search = GridSearchCV(estimator=dtree_reg, param_grid=param_grid,
-                               cv=3, n_jobs=-1, verbose=2, scoring='neg_mean_squared_error')
+    #                           cv=3, n_jobs=-1, verbose=2, scoring='neg_mean_squared_error')
+                                cv=3, n_jobs=-1, verbose=2, scoring='neg_mean_absolute_error')
+
+
     grid_search.fit(X_train, y_train)
     model = grid_search.best_estimator_
     best_params = grid_search.best_params_
@@ -257,7 +261,9 @@ def train_SVR(X_train, y_train,X_test,y_test):
     svr_reg = SVR()  # Initialize a decision tree regressor
 
     grid_search = GridSearchCV(estimator=svr_reg, param_grid=param_grid,
-                               cv=3, n_jobs=-1, verbose=2, scoring='neg_mean_squared_error')
+    #                           cv=3, n_jobs=-1, verbose=2, scoring='neg_mean_squared_error')
+                                cv = 3, n_jobs = -1, verbose = 2, scoring = 'neg_mean_absolute_error')
+
     grid_search.fit(X_train, y_train)
     # model = grid_search.best_estimator_
     best_params = grid_search.best_params_
@@ -303,7 +309,9 @@ def train_LR(X_train, y_train,X_test,y_test):
         predictions = model.predict(test_X)
 
         # Calculate and store the mean squared error
-        mse = mean_squared_error(test_y, predictions)
+
+        #mse = mean_squared_error(test_y, predictions)
+        mse = mean_absolute_error(test_y, predictions)
         if mse > best_mse:
             best_model_params = model.params
             best_model=model
@@ -389,8 +397,8 @@ if __name__ == "__main__":
     print('ARGS',sys.argv,flush=True)
     num_gen = int(sys.argv[1])
     indiv_idx = int(sys.argv[2])
-    tr_hive_ids = [int(ids) for ids in sys.argv[3].replace('[','').replace(']','').split(' ')]
-    ts_hive_ids = [int(ids) for ids in sys.argv[4].replace('[','').replace(']','').split(' ')]
+    tr_hive_ids = [int(ids) for ids in sys.argv[3].split(',')]
+    ts_hive_ids = [int(ids) for ids in sys.argv[4].split(',')]
 
     print("Evaluation of individual START",flush=True)
     eval_individual(num_gen, indiv_idx, tr_hive_ids,ts_hive_ids)
