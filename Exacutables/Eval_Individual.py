@@ -116,10 +116,12 @@ def get_data(hive_id: int, per_feature_group_chromosomes: dict, detection_time: 
         if (file.startswith(str(hive_id))):
             for feature_name, chromosomes in per_feature_group_chromosomes.items():
                 # print(feature_name,'->',chromosomes)
+
                 fnp = feature_name.split('-')
                 fn = fnp[0]
                 f = fnp[1]
-                if feature_name.replace("-", "_") in file:
+                feature_name_and_filter_from_file_name=file[23:].replace(".h5",'')
+                if feature_name.replace("-", "_") == feature_name_and_filter_from_file_name:
                     dts = file[3:22]
                     date_and_time = datetime.datetime.strptime(dts, "%Y_%m_%d_%H_%M_%S")
 

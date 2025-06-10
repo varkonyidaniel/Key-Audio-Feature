@@ -79,10 +79,11 @@ if __name__ == "__main__":
 
     local_test= ts_hive_ids[0] in tr_hive_ids
     if local_test:
-        Size_of_Population=4
+        Size_of_Population=2
         n_elites=2
-        Lengt_of_Chromosome=5
-        tourn_sel_k=4
+        Lengt_of_Chromosome=3582
+
+        tourn_sel_k=1
 
     '''
     if local_test:
