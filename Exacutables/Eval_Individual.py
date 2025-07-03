@@ -415,4 +415,3 @@ if __name__ == "__main__":
 # print(args)
 #    eval_individual(args.num_gen,args.indiv_index,args.hive_id)
 # print("Evaluation of individual ENDS")
-
