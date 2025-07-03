@@ -122,6 +122,7 @@ class GeneticAlgorithm:
     # best score not changing, early stop after some rounds
     def early_stopping_check(self):
         # no change in the best score
+        print(f"cur_best_value: {self.current_best_fitness}, last value: {self.early_stopping_last_value}")
         if self.current_best_fitness == self.early_stopping_last_value:
             # increase the number of no changes in the best score
             self.early_stopping_count += 1
