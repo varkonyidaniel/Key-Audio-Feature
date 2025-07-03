@@ -116,6 +116,9 @@ class GeneticAlgorithm:
                     indiv[i] = abs(indiv[i] - 1)
         return indiv
 
+
+
+
     # best score not changing, early stop after some rounds
     def early_stopping_check(self):
         # no change in the best score
@@ -124,13 +127,19 @@ class GeneticAlgorithm:
             self.early_stopping_count += 1
             # reached the maximum number, ...
             if self.early_stopping_count == self.early_stopping_max_iter:
-                self.early_stopping_count = 0
-                self.current_best_fitness = 0
+                #self.early_stopping_count = 0
+                #self.current_best_fitness = 0
                 return True
         else:  # if not equal, then greater
-            self.current_best_fitness = self.early_stopping_last_value
+            #self.current_best_fitness = self.early_stopping_last_value
             self.early_stopping_count = 0
         return False
+
+
+
+
+
+
 
     def gen_next_generation(self, n_elites: int, mutation_prob: float,
                             idx_imp_features: np.ndarray,
@@ -301,6 +310,7 @@ class GeneticAlgorithm:
                     self.results.get((i, 'LR')),
                     self.results.get((i, 'DTR'))
                 ])
+
 
     def print_lr(self):
         joblib.dump(self.results, f"../DATA/LOG/results.joblib")

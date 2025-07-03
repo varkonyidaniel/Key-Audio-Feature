@@ -125,6 +125,8 @@ if __name__ == "__main__":
     dw.write_data_to_h5(directory=parent_dir + target_dir,filename=f"population_{n_generation}",
                         ds_label="fitness_values", data=ga.get_all_fitness_values())
 
+    ga.current_best_fitness = ga.get_best_fitness_value()
+
     while(n_generation < max_generation):
 
         print(f"        Get most important features of{n_generation}th generation... START")
@@ -147,6 +149,8 @@ if __name__ == "__main__":
         dw.write_data_to_h5(directory=parent_dir + target_dir, filename=f"population_{n_generation}",
                             ds_label="population", data=pop_n)
 
+        ga.early_stopping_last_value = ga.current_best_fitness
+
         print(f"        Evaluation of population {n_generation}... START")
         ga.eval_population(n_generation,tr_hive_ids, ts_hive_ids,working_node_ids,wait_sec)
         print(f"        Evaluation of population {n_generation}... END")
@@ -156,15 +160,16 @@ if __name__ == "__main__":
                             filename=f"population_{n_generation}",
                             ds_label="fitness_values", data=ga.get_all_fitness_values())
 
-        # Checking BREAK conditions 1 by 1
-        _val = ga.get_best_fitness_value()
+        ga.current_best_fitness = ga.get_best_fitness_value()
 
-        print(f"        Checking fitness limit: current value: {-_val}, limit:{-fitness_trsh} START")
-        if -_val >= -fitness_trsh:
+        # Checking BREAK conditions 1 by 1
+        _val = ga.current_best_fitness
+
+        print(f"        Checking fitness limit: current best value: {_val}, limit:{-fitness_trsh}.")
+        if _val >= -fitness_trsh:
             print(f"        Limit raching: TRUE")
             break
         print(f"        Limit raching: FALSE")
-        print(f"        Checking fitness limit: current value: {-_val}, limit:{-fitness_trsh} END")
 
         print(f"        Early stopping check... START")
         # if best score was not changing for multiple rounds
